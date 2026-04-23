@@ -24,7 +24,7 @@ from core.user_profile import (
     list_users,
     mark_pushed,
 )
-from gateway.twilio_handler import send_sms
+from gateway.bluebubbles import send_bluebubbles
 
 log = logging.getLogger(__name__)
 
@@ -39,10 +39,10 @@ def _push_one(user) -> bool:
         log.info("no new articles for %s; skipping send", user.user_id)
         return False
     try:
-        sid = send_sms(user.phone, reply)
-        log.info("pushed %d articles to %s (sid=%s)", len(articles), user.phone, sid)
+        msg_id = send_bluebubbles(user.phone, reply)
+        log.info("pushed %d articles to %s (msg_id=%s)", len(articles), user.phone, msg_id)
     except Exception:
-        log.exception("SMS send failed for %s", user.phone)
+        log.exception("iMessage send failed for %s", user.phone)
         return False
     mark_pushed(user.user_id)
     return True

@@ -23,6 +23,7 @@ from config import (
 )
 from core.article_fetcher import init_cache
 from core.user_profile import get_or_create_user, init_db
+from gateway.bluebubbles import bp as bluebubbles_bp
 from gateway.web import bp as web_bp
 
 log = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ _MAX_SMS_CHARS = 1500
 
 app = Flask(__name__)
 app.register_blueprint(web_bp)
+app.register_blueprint(bluebubbles_bp)
 
 
 def _validate_twilio(req) -> bool:

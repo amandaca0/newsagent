@@ -61,9 +61,26 @@ python -m eval.evaluation --baseline      # TF-IDF vs. LLM-ranked comparison
 - `core/article_fetcher.py` — NewsAPI + RSS fetch, cache, TF-IDF and LLM ranking
 - `core/rag_engine.py` — paragraph chunking, ChromaDB, MMR retrieval, answer gen
 - `agent/graph.py` — LangGraph inbound + proactive pipelines
+- `gateway/bluebubbles.py` — BlueBubbles outbound sender + `/bluebubbles/webhook`
 - `gateway/twilio_handler.py` — Flask webhook with Twilio signature validation
 - `eval/evaluation.py` — relevance / retrieval / baseline metrics
 - `data/personas.json` — 5 differentiated synthetic personas with gold QA pairs
+
+## BlueBubbles (two-way iMessage, free, local-only)
+
+An alternative to Twilio for demos. Runs entirely on your Mac.
+
+1. Install the server app: https://bluebubbles.app → download "Server"
+2. Open it, sign into iMessage, grant **Full Disk Access** + **Accessibility**
+   + **Automation** when macOS prompts.
+3. Settings → API → set a password; copy into `BLUEBUBBLES_PASSWORD` in `.env`.
+4. Settings → API → Webhooks → add `http://localhost:5000/bluebubbles/webhook`
+   and enable the `new-message` event.
+5. Start the Flask app (`python main.py serve`) and text your Mac's iMessage
+   address from your phone — the agent will reply in the same thread.
+
+Outbound (digest push) goes through the same server:
+`scheduler.py` calls `send_bluebubbles(user.phone, body)`.
 
 ## Notes
 
