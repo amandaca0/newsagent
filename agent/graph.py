@@ -139,7 +139,9 @@ def proactive_format_node(state: AgentState) -> AgentState:
     digest_articles = articles[:MAX_ARTICLES_PER_PUSH]
     lines = [f"Your {len(digest_articles)}-story digest:"]
     for i, a in enumerate(digest_articles, 1):
-        snippet = a.rationale or (a.summary or "")[:140]
+        raw = (a.summary or "")[:280]
+        cut = max(raw.rfind(". "), raw.rfind("! "), raw.rfind("? "))
+        snippet = raw[:cut + 1] if cut != -1 else raw
         lines.append(f"{i}. {a.title} ({a.source})\n   {snippet}\n   {a.url}")
     lines.append("Reply with a question about any of these.")
     reply = "\n".join(lines)
