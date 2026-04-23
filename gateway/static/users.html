@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NewsAgent — users</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .modal-backdrop { animation: fadeIn 150ms ease-out; }
+    .modal-panel { animation: slideUp 180ms ease-out; }
+  </style>
+</head>
+<body class="bg-slate-50">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useEffect, useMemo } = React;
+
+    const FREQ_OPTIONS = [
+      { value: 'every_4h',     label: 'Every 4 hours',     icon: '⚡' },
+      { value: 'every_8h',     label: 'Every 8 hours',     icon: '🔄' },
+      { value: 'morning_9am',  label: 'Morning briefing',  icon: '☕' },
+      { value: 'evening_6pm',  label: 'Evening wrap-up',   icon: '🌙' },
+      { value: 'twice_daily',  label: 'Morning + evening', icon: '🌓' },
+      { value: 'custom_daily', label: 'Custom time',       icon: '⏰' },
+    ];
+
+    function localTimeToUtc(hhmm) {
+      if (!hhmm) return null;
+      const [h, m] = hhmm.split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      return { hour: d.getUTCHours(), minute: d.getUTCMinutes() };
+    }
+    function utcToLocalTime(hour, minute) {
+      if (hour == null || minute == null) return "09:00";
+      const d = new Date();
+      d.setUTCHours(hour, minute, 0, 0);
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+    function tzLabel() {
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+      catch { return 'local'; }
+    }
+    function fmtUtc(u) {
+      return `${String(u.hour).padStart(2,'0')}:${String(u.minute).padStart(2,'0')} UTC`;
+    }
+
+    function App() {
+      const [users, setUsers] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+      const [editing, setEditing] = useState(null);
+      const [toast, setToast] = useState(null);
+
+      const refresh = async () => {
+        setLoading(true);
+        try {
+          const resp = await fetch('/api/users');
+          const data = await resp.json();
+          setUsers(data.users || []);
+          setError(null);
+        } catch (e) {
+          setError(String(e));
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => { refresh(); }, []);
+
+      const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 2500);
+      };
+
+      const onSave = async (userId, payload) => {
+        const resp = await fetch(`/api/users/${userId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Save failed.');
+        setUsers(us => us.map(u => u.user_id === userId ? data.user : u));
+        setEditing(null);
+        showToast('Saved.');
+      };
+
+      const onDelete = async (user) => {
+        if (!confirm(`Delete ${user.phone}? This removes all their data.`)) return;
+        const resp = await fetch(`/api/users/${user.user_id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok) { alert(data.error || 'Delete failed.'); return; }
+        setUsers(us => us.filter(u => u.user_id !== user.user_id));
+        showToast('Deleted.');
+      };
+
+      return (
+        <div className="min-h-screen">
+          <Header />
+          <main className="max-w-5xl mx-auto px-4 py-8">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">Users</h1>
+                <p className="text-slate-600">{users.length} signed up</p>
+              </div>
+              <button onClick={refresh}
+                className="px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-sm font-medium text-slate-700">
+                ↻ Refresh
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {loading ? (
+              <div className="text-center py-16 text-slate-500">Loading...</div>
+            ) : users.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {users.map(u => (
+                  <UserCard key={u.user_id} user={u} onEdit={() => setEditing(u)} onDelete={() => onDelete(u)} />
+                ))}
+              </div>
+            )}
+          </main>
+
+          {editing && (
+            <EditModal
+              user={editing}
+              onClose={() => setEditing(null)}
+              onSave={onSave}
+            />
+          )}
+
+          {toast && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-slate-900 text-white rounded-lg shadow-lg text-sm z-50">
+              {toast}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Header() {
+      return (
+        <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+          <div className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold tracking-widest uppercase opacity-80">NewsAgent</h2>
+              <p className="text-xs opacity-70">Admin</p>
+            </div>
+            <nav className="flex gap-4 text-sm">
+              <a href="/" className="hover:underline opacity-90">← Sign up</a>
+              <a href="/users" className="font-semibold">Users</a>
+            </nav>
+          </div>
+        </header>
+      );
+    }
+
+    function EmptyState() {
+      return (
+        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+          <div className="text-5xl mb-3">👥</div>
+          <h2 className="text-xl font-semibold text-slate-900">No users yet</h2>
+          <p className="mt-2 text-slate-600">Sign someone up on the <a href="/" className="text-indigo-600 hover:underline">signup page</a>.</p>
+        </div>
+      );
+    }
+
+    function UserCard({ user, onEdit, onDelete }) {
+      return (
+        <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-lg font-semibold text-slate-900 font-mono">{user.phone}</div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                {user.onboarding_state === "DONE" ? (
+                  <span className="inline-flex items-center gap-1 text-green-700 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> active
+                  </span>
+                ) : (
+                  <span className="text-amber-600 font-medium">onboarding</span>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onEdit}
+                className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Edit</button>
+              <button onClick={onDelete}
+                className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg">Delete</button>
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Topics</div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {(user.interests || []).length === 0 ? (
+                <span className="text-sm text-slate-400 italic">none</span>
+              ) : user.interests.map(t => (
+                <span key={t} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-full text-xs">{t}</span>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 text-sm">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Schedule</div>
+            <div className="mt-1 text-slate-800">{user.frequency_label || user.frequency}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function EditModal({ user, onClose, onSave }) {
+      const [topics, setTopics] = useState((user.interests || []).join(', '));
+      const [frequency, setFrequency] = useState(user.frequency || 'morning_9am');
+      const [customTime, setCustomTime] = useState(
+        user.frequency === 'custom_daily'
+          ? utcToLocalTime(user.custom_push_hour, user.custom_push_minute)
+          : '09:00'
+      );
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState(null);
+
+      const utc = frequency === 'custom_daily' ? localTimeToUtc(customTime) : null;
+      const topicList = topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean);
+      const valid = topicList.length > 0 && (frequency !== 'custom_daily' || utc !== null);
+
+      const save = async () => {
+        setError(null);
+        setSaving(true);
+        try {
+          const payload = { topics: topicList, frequency };
+          if (frequency === 'custom_daily') {
+            payload.custom_hour = utc.hour;
+            payload.custom_minute = utc.minute;
+          }
+          await onSave(user.user_id, payload);
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 modal-backdrop"
+             style={{background: 'rgba(15, 23, 42, 0.55)'}} onClick={onClose}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl modal-panel flex flex-col"
+               style={{maxHeight: '90vh'}}
+               onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Edit user</h2>
+                <p className="text-sm text-slate-500 font-mono mt-0.5">{user.phone}</p>
+              </div>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-2xl leading-none">×</button>
+            </div>
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{error}</div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Topics</label>
+                <textarea
+                  rows={3}
+                  value={topics}
+                  onChange={e => setTopics(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none"
+                />
+                <p className="mt-1 text-xs text-slate-500">{topicList.length} {topicList.length === 1 ? 'topic' : 'topics'}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Schedule</label>
+                <div className="space-y-1.5">
+                  {FREQ_OPTIONS.map(opt => {
+                    const sel = frequency === opt.value;
+                    return (
+                      <label key={opt.value}
+                        className={[
+                          "flex items-center p-3 border-2 rounded-lg cursor-pointer transition",
+                          sel ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300"
+                        ].join(' ')}>
+                        <input type="radio" name="frequency" value={opt.value}
+                          checked={sel} onChange={() => setFrequency(opt.value)} className="sr-only" />
+                        <span className="text-xl mr-3">{opt.icon}</span>
+                        <span className={sel ? "font-semibold text-slate-900" : "text-slate-700"}>{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {frequency === 'custom_daily' && (
+                  <div className="mt-3 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Time to text (your local time)</label>
+                    <input type="time" value={customTime} onChange={e => setCustomTime(e.target.value)}
+                      className="px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-indigo-600 outline-none" />
+                    <p className="mt-1.5 text-xs text-slate-500">
+                      {tzLabel()}{utc && <> · stored as <span className="font-mono">{fmtUtc(utc)}</span></>}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex justify-end gap-3">
+              <button onClick={onClose} disabled={saving}
+                className="px-5 py-2.5 text-slate-700 hover:bg-slate-100 rounded-lg font-medium disabled:opacity-50">Cancel</button>
+              <button onClick={save} disabled={!valid || saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

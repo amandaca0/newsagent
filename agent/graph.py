@@ -130,10 +130,13 @@ def proactive_format_node(state: AgentState) -> AgentState:
     if not articles:
         return {"reply": ""}
 
-    lines = [f"Your {len(articles)}-story digest:"]
+    lines = [f"Your {len(articles)}-story digest:", ""]
     for i, a in enumerate(articles, 1):
-        snippet = a.rationale or (a.summary or "")[:140]
-        lines.append(f"{i}. {a.title} ({a.source})\n   {snippet}\n   {a.url}")
+        snippet = a.rationale or (a.summary or "")[:400]
+        lines.append(f"{i}. {a.title} ({a.source})")
+        lines.append(f"   {snippet}")
+        lines.append(f"   {a.url}")
+        lines.append("")
     lines.append("Reply with a question about any of these.")
     reply = "\n".join(lines)
 

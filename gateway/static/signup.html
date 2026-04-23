@@ -24,12 +24,35 @@
     const { useState, useMemo } = React;
 
     const FREQ_OPTIONS = [
-      { value: 'every_4h',    label: 'Every 4 hours',     detail: '08:00, 12:00, 16:00, 20:00 UTC', icon: '⚡' },
-      { value: 'every_8h',    label: 'Every 8 hours',     detail: '00:00, 08:00, 16:00 UTC',        icon: '🔄' },
-      { value: 'morning_9am', label: 'Morning briefing',  detail: 'Once a day at 09:00 UTC',        icon: '☕' },
-      { value: 'evening_6pm', label: 'Evening wrap-up',   detail: 'Once a day at 18:00 UTC',        icon: '🌙' },
-      { value: 'twice_daily', label: 'Morning + evening', detail: '09:00 and 18:00 UTC',            icon: '🌓' },
+      { value: 'every_4h',     label: 'Every 4 hours',     detail: '08:00, 12:00, 16:00, 20:00 UTC', icon: '⚡' },
+      { value: 'every_8h',     label: 'Every 8 hours',     detail: '00:00, 08:00, 16:00 UTC',        icon: '🔄' },
+      { value: 'morning_9am',  label: 'Morning briefing',  detail: 'Once a day at 09:00 UTC',        icon: '☕' },
+      { value: 'evening_6pm',  label: 'Evening wrap-up',   detail: 'Once a day at 18:00 UTC',        icon: '🌙' },
+      { value: 'twice_daily',  label: 'Morning + evening', detail: '09:00 and 18:00 UTC',            icon: '🌓' },
+      { value: 'custom_daily', label: 'Custom time',       detail: 'Pick your own hour, once a day', icon: '⏰' },
     ];
+
+    // Convert a local "HH:MM" string to the corresponding UTC {hour, minute}.
+    function localTimeToUtc(hhmm) {
+      if (!hhmm) return null;
+      const [h, m] = hhmm.split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return null;
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      return { hour: d.getUTCHours(), minute: d.getUTCMinutes() };
+    }
+
+    function fmtUtc(utc) {
+      return utc
+        ? `${String(utc.hour).padStart(2,'0')}:${String(utc.minute).padStart(2,'0')} UTC`
+        : '';
+    }
+
+    function tzLabel() {
+      try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone;
+      } catch { return 'local'; }
+    }
 
     const TOPIC_SUGGESTIONS = [
       "AI policy & governance", "NBA trades", "climate finance",
@@ -41,7 +64,9 @@
 
     function App() {
       const [step, setStep] = useState(1);
-      const [form, setForm] = useState({ phone: '', topics: '', frequency: 'morning_9am' });
+      const [form, setForm] = useState({
+        phone: '', topics: '', frequency: 'morning_9am', customTime: '09:00',
+      });
       const [status, setStatus] = useState({ loading: false, error: null, user: null });
 
       const update = (patch) => setForm(f => ({ ...f, ...patch }));
@@ -50,11 +75,25 @@
 
       const submit = async () => {
         setStatus({ loading: true, error: null, user: null });
+        const payload = {
+          phone: form.phone,
+          topics: form.topics,
+          frequency: form.frequency,
+        };
+        if (form.frequency === 'custom_daily') {
+          const utc = localTimeToUtc(form.customTime);
+          if (!utc) {
+            setStatus({ loading: false, error: "Pick a valid custom time.", user: null });
+            return;
+          }
+          payload.custom_hour = utc.hour;
+          payload.custom_minute = utc.minute;
+        }
         try {
           const resp = await fetch('/signup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(form),
+            body: JSON.stringify(payload),
           });
           const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || 'Something went wrong.');
@@ -67,7 +106,7 @@
       if (status.user) {
         return <Success user={status.user} frequencyLabel={status.user.frequency_label} onRestart={() => {
           setStep(1);
-          setForm({ phone: '', topics: '', frequency: 'morning_9am' });
+          setForm({ phone: '', topics: '', frequency: 'morning_9am', customTime: '09:00' });
           setStatus({ loading: false, error: null, user: null });
         }} />;
       }
@@ -94,7 +133,7 @@
               </div>
             </div>
             <p className="text-center text-white/60 text-xs mt-6">
-              Step {step} of {STEP_LABELS.length}
+              Step {step} of {STEP_LABELS.length} · <a href="/users" className="underline hover:text-white">Manage users</a>
             </p>
           </div>
         </div>
@@ -203,6 +242,8 @@
     }
 
     function Step3({ form, update, onNext, onBack }) {
+      const utc = form.frequency === 'custom_daily' ? localTimeToUtc(form.customTime) : null;
+      const customInvalid = form.frequency === 'custom_daily' && utc === null;
       return (
         <div>
           <h1 className="text-3xl font-bold text-slate-900">How often?</h1>
@@ -211,37 +252,57 @@
             {FREQ_OPTIONS.map(opt => {
               const selected = form.frequency === opt.value;
               return (
-                <label
-                  key={opt.value}
-                  className={[
-                    "flex items-center p-4 border-2 rounded-xl cursor-pointer transition",
-                    selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300"
-                  ].join(' ')}
-                >
-                  <input
-                    type="radio"
-                    name="frequency"
-                    value={opt.value}
-                    checked={selected}
-                    onChange={() => update({ frequency: opt.value })}
-                    className="sr-only"
-                  />
-                  <span className="text-2xl mr-4">{opt.icon}</span>
-                  <div className="flex-1">
-                    <div className="font-semibold text-slate-900">{opt.label}</div>
-                    <div className="text-sm text-slate-500">{opt.detail}</div>
-                  </div>
-                  <div className={[
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                    selected ? "border-indigo-600 bg-indigo-600" : "border-slate-300"
-                  ].join(' ')}>
-                    {selected && <div className="w-2 h-2 rounded-full bg-white" />}
-                  </div>
-                </label>
+                <React.Fragment key={opt.value}>
+                  <label
+                    className={[
+                      "flex items-center p-4 border-2 rounded-xl cursor-pointer transition",
+                      selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300"
+                    ].join(' ')}
+                  >
+                    <input
+                      type="radio"
+                      name="frequency"
+                      value={opt.value}
+                      checked={selected}
+                      onChange={() => update({ frequency: opt.value })}
+                      className="sr-only"
+                    />
+                    <span className="text-2xl mr-4">{opt.icon}</span>
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-900">{opt.label}</div>
+                      <div className="text-sm text-slate-500">{opt.detail}</div>
+                    </div>
+                    <div className={[
+                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                      selected ? "border-indigo-600 bg-indigo-600" : "border-slate-300"
+                    ].join(' ')}>
+                      {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                  </label>
+                  {opt.value === 'custom_daily' && selected && (
+                    <div className="ml-16 -mt-1 mb-3 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                      <label className="block text-sm font-semibold text-slate-700 mb-2">
+                        What time should we text you?
+                      </label>
+                      <input
+                        type="time"
+                        value={form.customTime}
+                        onChange={e => update({ customTime: e.target.value })}
+                        className="px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none text-lg"
+                      />
+                      <p className="mt-2 text-xs text-slate-500">
+                        Your timezone: <span className="font-mono">{tzLabel()}</span>
+                        {utc && (
+                          <> · stored as <span className="font-mono">{fmtUtc(utc)}</span></>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
-          <NavRow onBack={onBack} onNext={onNext} nextLabel="Review" />
+          <NavRow onBack={onBack} onNext={onNext} nextLabel="Review" nextDisabled={customInvalid} />
         </div>
       );
     }
@@ -249,6 +310,12 @@
     function Step4({ form, onBack, onSubmit, loading }) {
       const freq = FREQ_OPTIONS.find(o => o.value === form.frequency);
       const topics = form.topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean);
+      let scheduleDetail = freq.detail;
+      if (form.frequency === 'custom_daily') {
+        const utc = localTimeToUtc(form.customTime);
+        scheduleDetail = `Daily at ${form.customTime} (${tzLabel()})` +
+          (utc ? ` · ${fmtUtc(utc)}` : '');
+      }
       return (
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Looks good?</h1>
@@ -262,7 +329,7 @@
                 ))}
               </div>
             } />
-            <Row label="Schedule" value={`${freq.icon}  ${freq.label} — ${freq.detail}`} />
+            <Row label="Schedule" value={`${freq.icon}  ${freq.label} — ${scheduleDetail}`} />
           </div>
           <div className="mt-8 flex items-center justify-between">
             <button
@@ -322,10 +389,15 @@
               <Row label="Topics" value={(user.interests || []).join(', ')} />
               <Row label="Schedule" value={frequencyLabel || user.frequency} />
             </dl>
-            <button onClick={onRestart}
-              className="mt-8 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
-              Sign up another person
-            </button>
+            <div className="mt-8 flex flex-col gap-3 items-center">
+              <button onClick={onRestart}
+                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
+                Sign up another person
+              </button>
+              <a href="/users" className="text-sm text-slate-500 hover:text-slate-900 underline">
+                Manage users →
+              </a>
+            </div>
           </div>
         </div>
       );

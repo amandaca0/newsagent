@@ -28,9 +28,11 @@ from gateway.web import bp as web_bp
 
 log = logging.getLogger(__name__)
 
-# SMS has a 1600-char hard limit; Twilio segments at 160 GSM-7 / 70 UCS-2.
-# We truncate at 1500 to leave safety margin for the final segment.
-_MAX_SMS_CHARS = 1500
+# Only Twilio's SMS pipeline imposes a practical limit (each segment is 160
+# GSM-7 / 70 UCS-2 chars; Twilio will split long messages into up to ~160
+# segments). iMessage via BlueBubbles has no meaningful character cap, so this
+# constant only bites the Twilio backend.
+_MAX_SMS_CHARS = 5000
 
 
 app = Flask(__name__)

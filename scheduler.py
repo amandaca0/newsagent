@@ -85,9 +85,9 @@ def main() -> None:
         return
 
     sched = BlockingScheduler(timezone="UTC")
-    sched.add_job(push_due_users, "cron", minute=0,
-                  id="hourly_tick", max_instances=1)
-    log.info("scheduler started; hourly tick at :00 UTC")
+    sched.add_job(push_due_users, "cron", minute="*",
+                  id="minute_tick", max_instances=1, coalesce=True)
+    log.info("scheduler started; tick every minute UTC")
     sched.start()
 
 

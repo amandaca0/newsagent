@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS users (
     persona_summary    TEXT NOT NULL DEFAULT '',
     onboarding_state   TEXT NOT NULL DEFAULT 'NEEDS_ONBOARDING',
     frequency          TEXT NOT NULL DEFAULT 'morning_9am',
+    custom_push_hour   INTEGER,  -- 0..23 UTC; used when frequency = 'custom_daily'
+    custom_push_minute INTEGER,  -- 0..59 UTC; used when frequency = 'custom_daily'
     last_pushed_at     REAL,
     created_at         REAL NOT NULL,
     updated_at         REAL NOT NULL
@@ -75,6 +77,7 @@ FREQUENCY_CHOICES: dict[str, str] = {
     "morning_9am":  "Once a day — 09:00 UTC",
     "evening_6pm":  "Once a day — 18:00 UTC",
     "twice_daily":  "Twice a day — 09:00 and 18:00 UTC",
+    "custom_daily": "Once a day — custom time",
 }
 
 
@@ -86,6 +89,8 @@ class User:
     persona_summary: str = ""
     onboarding_state: str = "NEEDS_ONBOARDING"
     frequency: str = "morning_9am"
+    custom_push_hour: Optional[int] = None
+    custom_push_minute: Optional[int] = None
     last_pushed_at: Optional[float] = None
     conversation_history: List[dict] = field(default_factory=list)
 
@@ -111,8 +116,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     """Idempotent column adds for DBs created before a column existed."""
     existing = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
     for col, ddl in (
-        ("frequency",      "ALTER TABLE users ADD COLUMN frequency TEXT NOT NULL DEFAULT 'morning_9am'"),
-        ("last_pushed_at", "ALTER TABLE users ADD COLUMN last_pushed_at REAL"),
+        ("frequency",          "ALTER TABLE users ADD COLUMN frequency TEXT NOT NULL DEFAULT 'morning_9am'"),
+        ("last_pushed_at",     "ALTER TABLE users ADD COLUMN last_pushed_at REAL"),
+        ("custom_push_hour",   "ALTER TABLE users ADD COLUMN custom_push_hour INTEGER"),
+        ("custom_push_minute", "ALTER TABLE users ADD COLUMN custom_push_minute INTEGER"),
     ):
         if col not in existing:
             conn.execute(ddl)
@@ -126,6 +133,8 @@ def _row_to_user(row: sqlite3.Row, history: List[dict]) -> User:
         persona_summary=row["persona_summary"],
         onboarding_state=row["onboarding_state"],
         frequency=row["frequency"] if "frequency" in row.keys() else "morning_9am",
+        custom_push_hour=row["custom_push_hour"] if "custom_push_hour" in row.keys() else None,
+        custom_push_minute=row["custom_push_minute"] if "custom_push_minute" in row.keys() else None,
         last_pushed_at=row["last_pushed_at"] if "last_pushed_at" in row.keys() else None,
         conversation_history=history,
     )
@@ -206,13 +215,29 @@ def set_onboarding_state(user_id: str, state: str) -> None:
         )
 
 
-def set_frequency(user_id: str, frequency: str) -> None:
+def set_frequency(
+    user_id: str,
+    frequency: str,
+    custom_push_hour: Optional[int] = None,
+    custom_push_minute: Optional[int] = None,
+) -> None:
     if frequency not in FREQUENCY_CHOICES:
         raise ValueError(f"unknown frequency: {frequency}")
+    if frequency == "custom_daily":
+        if custom_push_hour is None or not (0 <= int(custom_push_hour) <= 23):
+            raise ValueError("custom_daily requires custom_push_hour in 0..23")
+        if custom_push_minute is None or not (0 <= int(custom_push_minute) <= 59):
+            raise ValueError("custom_daily requires custom_push_minute in 0..59")
+        custom_push_hour = int(custom_push_hour)
+        custom_push_minute = int(custom_push_minute)
+    else:
+        custom_push_hour = None
+        custom_push_minute = None
     with _connect() as conn:
         conn.execute(
-            "UPDATE users SET frequency = ?, updated_at = ? WHERE user_id = ?",
-            (frequency, time.time(), user_id),
+            "UPDATE users SET frequency = ?, custom_push_hour = ?, custom_push_minute = ?, "
+            "updated_at = ? WHERE user_id = ?",
+            (frequency, custom_push_hour, custom_push_minute, time.time(), user_id),
         )
 
 
@@ -233,17 +258,38 @@ _FREQUENCY_HOURS: dict[str, set[int]] = {
 }
 
 _MIN_SECONDS_BETWEEN_PUSHES = 3 * 60 * 60  # debounce against cron retries
+_MINUTE_SLACK = 1  # tolerate ±1 minute of cron drift
+
+
+def _target_minutes_for(user: User) -> set[int]:
+    """Return the set of UTC minute-of-day values the user should be pushed at.
+
+    One minute-of-day = hour * 60 + minute, so a single scalar per target.
+    """
+    if user.frequency == "custom_daily":
+        if user.custom_push_hour is None or user.custom_push_minute is None:
+            return set()
+        return {int(user.custom_push_hour) * 60 + int(user.custom_push_minute)}
+    hours = _FREQUENCY_HOURS.get(user.frequency, {9})
+    return {h * 60 for h in hours}  # fixed windows fire at :00
 
 
 def is_push_due(user: User, now: float) -> bool:
-    """Return True if the user's frequency window matches the current UTC
-    hour AND it's been long enough since the last push."""
+    """Return True when "now" is within _MINUTE_SLACK of one of the user's
+    scheduled minute-of-day targets AND the debounce window has elapsed."""
     if user.onboarding_state != "DONE":
         return False
-    hours = _FREQUENCY_HOURS.get(user.frequency, {9})
+    targets = _target_minutes_for(user)
+    if not targets:
+        return False
     import datetime
-    now_hour = datetime.datetime.utcfromtimestamp(now).hour
-    if now_hour not in hours:
+    n = datetime.datetime.utcfromtimestamp(now)
+    now_min = n.hour * 60 + n.minute
+    within_slack = any(
+        abs(now_min - t) <= _MINUTE_SLACK or abs(now_min - t) >= (24 * 60 - _MINUTE_SLACK)
+        for t in targets
+    )
+    if not within_slack:
         return False
     if user.last_pushed_at is None:
         return True

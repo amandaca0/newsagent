@@ -200,9 +200,9 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
 
 _ANSWER_PROMPT = """\
-You are a concise news assistant replying to a user over SMS. Keep the reply under 320 characters when possible.
+You are a news assistant replying to a user over iMessage. Give a thorough, well-structured answer — don't cut important details short. Aim for 2-5 short paragraphs (or a bulleted list if the question implies multiple items), not a one-liner.
 
-Use ONLY the retrieved context to answer. If the context does not contain the answer, say so honestly and suggest what the user could ask next.
+Use ONLY the retrieved context to answer. If the context does not fully answer the question, be honest about what you can and cannot say, then suggest a follow-up the user could ask.
 
 Cite sources inline as [Source Name] after claims drawn from them.
 
@@ -264,7 +264,7 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
         )
         msg = client.messages.create(
             model=LLM_MODEL,
-            max_tokens=500,
+            max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
         return msg.content[0].text.strip()
