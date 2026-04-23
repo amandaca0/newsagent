@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NewsAgent — sign up</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 520px; margin: 40px auto; padding: 0 20px;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 4px; }
+    .sub { color: #666; margin-top: 0; margin-bottom: 28px; }
+    fieldset { border: 1px solid #ddd; border-radius: 8px; padding: 14px 18px; margin-bottom: 18px; }
+    legend { font-weight: 600; padding: 0 6px; }
+    label.opt { display: block; margin: 6px 0; cursor: pointer; }
+    input[type=tel], textarea {
+      width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px;
+      font-size: 16px; box-sizing: border-box; font-family: inherit;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .hint { font-size: 13px; color: #666; margin-top: 6px; }
+    button {
+      background: #111; color: white; border: 0; padding: 12px 20px;
+      border-radius: 6px; font-size: 16px; cursor: pointer; width: 100%;
+    }
+    button:hover { background: #333; }
+    .error {
+      background: #fee; border: 1px solid #f99; color: #900;
+      padding: 10px 14px; border-radius: 6px; margin-bottom: 18px;
+    }
+  </style>
+</head>
+<body>
+  <h1>NewsAgent</h1>
+  <p class="sub">Get a personalized news digest by SMS. Sign up in under a minute.</p>
+
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <form method="post" action="/signup">
+    <fieldset>
+      <legend>1. Phone number</legend>
+      <input type="tel" name="phone" placeholder="+1 555 123 4567"
+             required value="{{ form.phone or '' }}">
+      <div class="hint">We text the digest here. US numbers: country code +1 will be added automatically.</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>2. News topics</legend>
+      <textarea name="topics" placeholder="EU AI regulation, NBA trades, climate finance, indie game studios"
+                required>{{ form.topics or '' }}</textarea>
+      <div class="hint">Comma-separated. Be specific — "EU AI Act" beats "AI".</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>3. How often?</legend>
+      {% for value, label in frequency_choices.items() %}
+      <label class="opt">
+        <input type="radio" name="frequency" value="{{ value }}"
+          {% if form.frequency == value or (not form.frequency and value == 'morning_9am') %}checked{% endif %}>
+        {{ label }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <button type="submit">Sign me up</button>
+  </form>
+</body>
+</html>
