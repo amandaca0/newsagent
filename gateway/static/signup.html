@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NewsAgent — sign up</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .step-enter { animation: fadeSlide 220ms ease-out; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50">
+  <div id="root"></div>
+
+  <script type="text/babel" data-type="module">
+    const { useState, useMemo } = React;
+
+    const FREQ_OPTIONS = [
+      { value: 'every_4h',    label: 'Every 4 hours',     detail: '08:00, 12:00, 16:00, 20:00 UTC', icon: '⚡' },
+      { value: 'every_8h',    label: 'Every 8 hours',     detail: '00:00, 08:00, 16:00 UTC',        icon: '🔄' },
+      { value: 'morning_9am', label: 'Morning briefing',  detail: 'Once a day at 09:00 UTC',        icon: '☕' },
+      { value: 'evening_6pm', label: 'Evening wrap-up',   detail: 'Once a day at 18:00 UTC',        icon: '🌙' },
+      { value: 'twice_daily', label: 'Morning + evening', detail: '09:00 and 18:00 UTC',            icon: '🌓' },
+    ];
+
+    const TOPIC_SUGGESTIONS = [
+      "AI policy & governance", "NBA trades", "climate finance",
+      "indie game studios", "Apple product launches", "biotech funding",
+      "EU tech regulation", "crypto markets",
+    ];
+
+    const STEP_LABELS = ["Phone", "Topics", "Schedule", "Review"];
+
+    function App() {
+      const [step, setStep] = useState(1);
+      const [form, setForm] = useState({ phone: '', topics: '', frequency: 'morning_9am' });
+      const [status, setStatus] = useState({ loading: false, error: null, user: null });
+
+      const update = (patch) => setForm(f => ({ ...f, ...patch }));
+      const next = () => setStep(s => Math.min(s + 1, 4));
+      const back = () => setStep(s => Math.max(s - 1, 1));
+
+      const submit = async () => {
+        setStatus({ loading: true, error: null, user: null });
+        try {
+          const resp = await fetch('/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form),
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Something went wrong.');
+          setStatus({ loading: false, error: null, user: data.user });
+        } catch (e) {
+          setStatus({ loading: false, error: e.message, user: null });
+        }
+      };
+
+      if (status.user) {
+        return <Success user={status.user} frequencyLabel={status.user.frequency_label} onRestart={() => {
+          setStep(1);
+          setForm({ phone: '', topics: '', frequency: 'morning_9am' });
+          setStatus({ loading: false, error: null, user: null });
+        }} />;
+      }
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl">
+            <div className="text-center mb-6">
+              <h2 className="text-white/90 text-sm font-semibold tracking-widest uppercase">NewsAgent</h2>
+              <p className="text-white/70 text-sm mt-1">Your personalized news digest, delivered.</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
+              <ProgressBar step={step} labels={STEP_LABELS} />
+              {status.error && (
+                <div className="mt-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+                  {status.error}
+                </div>
+              )}
+              <div key={step} className="mt-8 step-enter">
+                {step === 1 && <Step1 form={form} update={update} onNext={next} />}
+                {step === 2 && <Step2 form={form} update={update} onNext={next} onBack={back} />}
+                {step === 3 && <Step3 form={form} update={update} onNext={next} onBack={back} />}
+                {step === 4 && <Step4 form={form} onBack={back} onSubmit={submit} loading={status.loading} />}
+              </div>
+            </div>
+            <p className="text-center text-white/60 text-xs mt-6">
+              Step {step} of {STEP_LABELS.length}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    function ProgressBar({ step, labels }) {
+      return (
+        <div className="flex items-center">
+          {labels.map((label, i) => {
+            const idx = i + 1;
+            const done = idx < step;
+            const active = idx === step;
+            return (
+              <React.Fragment key={label}>
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className={[
+                    "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition",
+                    done   ? "bg-green-500 text-white" :
+                    active ? "bg-indigo-600 text-white ring-4 ring-indigo-100" :
+                             "bg-slate-100 text-slate-400"
+                  ].join(' ')}>
+                    {done ? '✓' : idx}
+                  </div>
+                  <span className={[
+                    "mt-2 text-xs",
+                    active ? "text-slate-900 font-semibold" : "text-slate-500"
+                  ].join(' ')}>{label}</span>
+                </div>
+                {idx < labels.length && (
+                  <div className={[
+                    "flex-1 h-1 mx-2 rounded-full transition-colors",
+                    done ? "bg-green-500" : "bg-slate-200"
+                  ].join(' ')} style={{marginBottom: 22}} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function Step1({ form, update, onNext }) {
+      const digits = form.phone.replace(/\D/g, '');
+      const valid = digits.length >= 10 && digits.length <= 15;
+      return (
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">What's your phone number?</h1>
+          <p className="mt-2 text-slate-600">We'll text your digest here. Nothing else.</p>
+          <input
+            type="tel"
+            autoFocus
+            className="mt-8 w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
+            placeholder="+1 (555) 123-4567"
+            value={form.phone}
+            onChange={e => update({ phone: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
+          />
+          <p className="mt-3 text-sm text-slate-500">
+            US numbers — country code +1 will be added automatically.
+          </p>
+          <NavRow onNext={onNext} nextDisabled={!valid} />
+        </div>
+      );
+    }
+
+    function Step2({ form, update, onNext, onBack }) {
+      const addChip = (s) => {
+        const cur = form.topics.trim();
+        const sep = cur && !cur.endsWith(',') ? ', ' : '';
+        update({ topics: cur + sep + s });
+      };
+      const count = form.topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean).length;
+      const valid = count > 0;
+      return (
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">What's on your radar?</h1>
+          <p className="mt-2 text-slate-600">
+            List specific topics, comma-separated. <span className="font-medium">"EU AI Act"</span> beats <span className="font-medium">"AI"</span>.
+          </p>
+          <textarea
+            autoFocus
+            rows={4}
+            className="mt-8 w-full px-5 py-4 text-base border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition resize-none"
+            placeholder="EU AI regulation, NBA trades, climate finance..."
+            value={form.topics}
+            onChange={e => update({ topics: e.target.value })}
+          />
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Suggestions</p>
+            <div className="flex flex-wrap gap-2">
+              {TOPIC_SUGGESTIONS.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => addChip(s)}
+                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700 rounded-full transition"
+                >+ {s}</button>
+              ))}
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-slate-500">{count} {count === 1 ? 'topic' : 'topics'} selected</p>
+          <NavRow onBack={onBack} onNext={onNext} nextDisabled={!valid} />
+        </div>
+      );
+    }
+
+    function Step3({ form, update, onNext, onBack }) {
+      return (
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">How often?</h1>
+          <p className="mt-2 text-slate-600">Pick the cadence that fits your routine.</p>
+          <div className="mt-8 space-y-2">
+            {FREQ_OPTIONS.map(opt => {
+              const selected = form.frequency === opt.value;
+              return (
+                <label
+                  key={opt.value}
+                  className={[
+                    "flex items-center p-4 border-2 rounded-xl cursor-pointer transition",
+                    selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300"
+                  ].join(' ')}
+                >
+                  <input
+                    type="radio"
+                    name="frequency"
+                    value={opt.value}
+                    checked={selected}
+                    onChange={() => update({ frequency: opt.value })}
+                    className="sr-only"
+                  />
+                  <span className="text-2xl mr-4">{opt.icon}</span>
+                  <div className="flex-1">
+                    <div className="font-semibold text-slate-900">{opt.label}</div>
+                    <div className="text-sm text-slate-500">{opt.detail}</div>
+                  </div>
+                  <div className={[
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center",
+                    selected ? "border-indigo-600 bg-indigo-600" : "border-slate-300"
+                  ].join(' ')}>
+                    {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+          <NavRow onBack={onBack} onNext={onNext} nextLabel="Review" />
+        </div>
+      );
+    }
+
+    function Step4({ form, onBack, onSubmit, loading }) {
+      const freq = FREQ_OPTIONS.find(o => o.value === form.frequency);
+      const topics = form.topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean);
+      return (
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Looks good?</h1>
+          <p className="mt-2 text-slate-600">Double-check, then we'll set you up.</p>
+          <div className="mt-8 space-y-5 bg-slate-50 rounded-xl p-6">
+            <Row label="Phone number" value={form.phone} />
+            <Row label="Topics" value={
+              <div className="flex flex-wrap gap-1.5">
+                {topics.map(t => (
+                  <span key={t} className="px-2.5 py-1 bg-white border border-slate-200 rounded-full text-sm">{t}</span>
+                ))}
+              </div>
+            } />
+            <Row label="Schedule" value={`${freq.icon}  ${freq.label} — ${freq.detail}`} />
+          </div>
+          <div className="mt-8 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onBack}
+              disabled={loading}
+              className="px-5 py-3 text-slate-600 hover:text-slate-900 font-medium disabled:opacity-40"
+            >← Back</button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={loading}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition"
+            >{loading ? "Signing up…" : "Sign me up  ✓"}</button>
+          </div>
+        </div>
+      );
+    }
+
+    function Row({ label, value }) {
+      return (
+        <div>
+          <dt className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</dt>
+          <dd className="mt-1 text-slate-900">{value}</dd>
+        </div>
+      );
+    }
+
+    function NavRow({ onBack, onNext, nextDisabled, nextLabel = "Next" }) {
+      return (
+        <div className="mt-10 flex items-center justify-between">
+          {onBack ? (
+            <button type="button" onClick={onBack}
+              className="px-5 py-3 text-slate-600 hover:text-slate-900 font-medium">← Back</button>
+          ) : <div />}
+          <button type="button" onClick={onNext} disabled={nextDisabled}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition">
+            {nextLabel} →
+          </button>
+        </div>
+      );
+    }
+
+    function Success({ user, frequencyLabel, onRestart }) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl p-10 text-center">
+            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-green-100 flex items-center justify-center">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900">You're all set!</h1>
+            <p className="mt-2 text-slate-600">Your first digest arrives at the next scheduled time.</p>
+            <dl className="mt-8 text-left space-y-4 bg-slate-50 rounded-xl p-6">
+              <Row label="Phone" value={user.phone} />
+              <Row label="Topics" value={(user.interests || []).join(', ')} />
+              <Row label="Schedule" value={frequencyLabel || user.frequency} />
+            </dl>
+            <button onClick={onRestart}
+              className="mt-8 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
+              Sign up another person
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
