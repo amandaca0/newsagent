@@ -15,15 +15,38 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import chromadb
+import html
 import numpy as np
-from anthropic import Anthropic
+from groq import Groq
+from html.parser import HTMLParser
 from sentence_transformers import SentenceTransformer
 
-from config import ANTHROPIC_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
+from config import GROQ_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
 from core.article_fetcher import Article, get_cached_article
 from core.user_profile import User, llm_configured
 
 log = logging.getLogger(__name__)
+
+
+class _HTMLStripper(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self._parts: list[str] = []
+
+    def handle_data(self, data: str) -> None:
+        self._parts.append(data)
+
+    def get_text(self) -> str:
+        return " ".join(self._parts)
+
+
+def _strip_html(text: str) -> str:
+    if "<" not in text:
+        return text
+    stripper = _HTMLStripper()
+    stripper.feed(text)
+    return html.unescape(stripper.get_text())
+
 
 _MIN_CHUNK_CHARS = 80
 _MAX_CHUNK_CHARS = 900
@@ -111,7 +134,7 @@ def index_articles(user_id: str, articles: List[Article]) -> int:
     docs: List[str] = []
     metadatas: List[dict] = []
     for art in articles:
-        body = f"{art.title}\n\n{art.content or art.summary}"
+        body = _strip_html(f"{art.title}\n\n{art.content or art.summary}")
         for i, chunk in enumerate(_chunk_paragraphs(body)):
             ids.append(f"{art.article_id}__{i}")
             docs.append(chunk)
@@ -200,11 +223,13 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
 
 _ANSWER_PROMPT = """\
-You are a concise news assistant replying to a user over SMS. Keep the reply under 320 characters when possible.
+You are a helpful news assistant answering a user's follow-up question about articles they recently received.
 
-Use ONLY the retrieved context to answer. If the context does not contain the answer, say so honestly and suggest what the user could ask next.
-
-Cite sources inline as [Source Name] after claims drawn from them.
+Guidelines:
+- Answer in 2-4 sentences. Be direct and specific — do not repeat the question.
+- Cite sources inline as [Source Name] after each claim drawn from them.
+- If the context does not contain enough detail to fully answer, say so briefly and tell the user what the article does cover.
+- Do not pad the answer with filler phrases like "Based on the articles..." or "According to the context...".
 
 User's recent conversation:
 {history}
@@ -250,24 +275,25 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
 
     def _fallback() -> str:
         top = chunks[0]
-        return f"From {top.source} — {top.title}: {top.text[:250]}..."
+        snippet = top.text[:300].rsplit(" ", 1)[0]
+        return f"From {top.source} — {top.title}: {snippet}"
 
     if not llm_configured():
         return _fallback()
 
     try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = Groq(api_key=GROQ_API_KEY)
         prompt = _ANSWER_PROMPT.format(
             history=_format_history(user.conversation_history),
             query=query,
             context=_format_context(chunks),
         )
-        msg = client.messages.create(
+        resp = client.chat.completions.create(
             model=LLM_MODEL,
-            max_tokens=500,
+            max_tokens=800,
             messages=[{"role": "user", "content": prompt}],
         )
-        return msg.content[0].text.strip()
+        return resp.choices[0].message.content.strip()
     except Exception as e:
         log.warning("RAG answer LLM call failed (%s); returning top chunk", e)
         return _fallback()

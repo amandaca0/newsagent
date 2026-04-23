@@ -26,9 +26,9 @@ import uuid
 from pathlib import Path
 from typing import List
 
-from anthropic import Anthropic
+from groq import Groq
 
-from config import ANTHROPIC_API_KEY, JUDGE_MODEL
+from config import GROQ_API_KEY, JUDGE_MODEL
 from core.article_fetcher import (
     Article,
     fetch_articles,
@@ -87,19 +87,19 @@ def _build_ephemeral_user(persona: dict) -> User:
     )
 
 
-def _judge_relevance(client: Anthropic, persona: str, article: Article) -> dict:
+def _judge_relevance(client: Groq, persona: str, article: Article) -> dict:
     prompt = _JUDGE_PROMPT.format(
         persona=persona,
         title=article.title,
         source=article.source,
         summary=(article.summary or article.content)[:600],
     )
-    resp = client.messages.create(
+    resp = client.chat.completions.create(
         model=JUDGE_MODEL,
         max_tokens=400,
         messages=[{"role": "user", "content": prompt}],
     )
-    text = resp.content[0].text
+    text = resp.choices[0].message.content
     start, end = text.find("{"), text.rfind("}")
     if start == -1 or end == -1:
         return {"score": 0, "rationale": f"unparsable: {text[:120]}"}
@@ -112,9 +112,9 @@ def _judge_relevance(client: Anthropic, persona: str, article: Article) -> dict:
 # ---------- metric 1: relevance ----------
 
 def eval_relevance(top_k: int = 5) -> dict:
-    if not ANTHROPIC_API_KEY:
-        return {"metric": "relevance_llm_judge", "skipped": "no ANTHROPIC_API_KEY"}
-    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    if not GROQ_API_KEY:
+        return {"metric": "relevance_llm_judge", "skipped": "no GROQ_API_KEY"}
+    client = Groq(api_key=GROQ_API_KEY)
     personas = _load_personas()
     articles = fetch_articles()
 
@@ -215,9 +215,9 @@ def eval_retrieval(k: int = 4) -> dict:
 # ---------- metric 3: baseline comparison ----------
 
 def eval_baseline(top_k: int = 5) -> dict:
-    if not ANTHROPIC_API_KEY:
-        return {"metric": "baseline_comparison", "skipped": "no ANTHROPIC_API_KEY"}
-    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    if not GROQ_API_KEY:
+        return {"metric": "baseline_comparison", "skipped": "no GROQ_API_KEY"}
+    client = Groq(api_key=GROQ_API_KEY)
     personas = _load_personas()
     articles = fetch_articles()
 
@@ -256,8 +256,8 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    if not ANTHROPIC_API_KEY:
-        log.warning("ANTHROPIC_API_KEY not set — relevance and baseline will be skipped")
+    if not GROQ_API_KEY:
+        log.warning("GROQ_API_KEY not set — relevance and baseline will be skipped")
 
     out = {"timestamp": time.time()}
     if args.relevance or args.all:

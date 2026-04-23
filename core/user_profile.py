@@ -15,10 +15,10 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-from anthropic import Anthropic
+from groq import Groq
 
 from config import (
-    ANTHROPIC_API_KEY,
+    GROQ_API_KEY,
     CONVERSATION_HISTORY_TURNS,
     DB_PATH,
     LLM_MODEL,
@@ -30,9 +30,9 @@ log = logging.getLogger(__name__)
 def llm_configured() -> bool:
     """True only when the API key looks real — not empty and not the
     placeholder value from .env.example."""
-    if not ANTHROPIC_API_KEY:
+    if not GROQ_API_KEY:
         return False
-    if ANTHROPIC_API_KEY.endswith("...") or ANTHROPIC_API_KEY == "sk-ant-...":
+    if GROQ_API_KEY.endswith("...") or GROQ_API_KEY == "gsk_...":
         return False
     return True
 
@@ -64,6 +64,13 @@ CREATE TABLE IF NOT EXISTS sent_articles (
     user_id    TEXT NOT NULL,
     article_id TEXT NOT NULL,
     sent_at    REAL NOT NULL,
+    PRIMARY KEY(user_id, article_id)
+);
+
+CREATE TABLE IF NOT EXISTS indexed_articles (
+    user_id    TEXT NOT NULL,
+    article_id TEXT NOT NULL,
+    indexed_at REAL NOT NULL,
     PRIMARY KEY(user_id, article_id)
 );
 """
@@ -257,6 +264,7 @@ def delete_user(user_id: str) -> bool:
     with _connect() as conn:
         conn.execute("DELETE FROM messages WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM sent_articles WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM indexed_articles WHERE user_id = ?", (user_id,))
         cur = conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         return cur.rowcount > 0
 
@@ -293,6 +301,43 @@ def already_sent_ids(user_id: str) -> set[str]:
         return {r["article_id"] for r in rows}
 
 
+_INDEXED_ARTICLE_TTL = 7 * 24 * 60 * 60  # 7 days
+
+
+def mark_articles_indexed(user_id: str, article_ids: Iterable[str]) -> None:
+    now = time.time()
+    rows = [(user_id, aid, now) for aid in article_ids]
+    if not rows:
+        return
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO indexed_articles (user_id, article_id, indexed_at) "
+            "VALUES (?, ?, ?)",
+            rows,
+        )
+
+
+def already_indexed_ids(user_id: str, max_age_seconds: float = _INDEXED_ARTICLE_TTL) -> set[str]:
+    cutoff = time.time() - max_age_seconds
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT article_id FROM indexed_articles WHERE user_id = ? AND indexed_at >= ?",
+            (user_id, cutoff),
+        ).fetchall()
+        return {r["article_id"] for r in rows}
+
+
+def purge_old_indexed_articles(user_id: str, max_age_seconds: float = _INDEXED_ARTICLE_TTL) -> int:
+    """Remove indexed_articles rows older than max_age_seconds. Returns rows deleted."""
+    cutoff = time.time() - max_age_seconds
+    with _connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM indexed_articles WHERE user_id = ? AND indexed_at < ?",
+            (user_id, cutoff),
+        )
+        return cur.rowcount
+
+
 _PERSONA_PROMPT = """\
 You are building an embedding-friendly interest profile for a news recommendation system.
 
@@ -318,8 +363,8 @@ def generate_persona_summary(interests: List[str]) -> str:
     if not llm_configured():
         return fallback
     try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
-        msg = client.messages.create(
+        client = Groq(api_key=GROQ_API_KEY)
+        resp = client.chat.completions.create(
             model=LLM_MODEL,
             max_tokens=300,
             messages=[{
@@ -327,7 +372,7 @@ def generate_persona_summary(interests: List[str]) -> str:
                 "content": _PERSONA_PROMPT.format(interests=", ".join(interests)),
             }],
         )
-        return msg.content[0].text.strip()
+        return resp.choices[0].message.content.strip()
     except Exception as e:
         log.warning("persona summary LLM call failed (%s); using keyword fallback", e)
         return fallback

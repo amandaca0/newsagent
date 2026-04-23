@@ -16,15 +16,16 @@ from typing import List, Literal, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from config import MAX_ARTICLES_PER_PUSH
+from config import MAX_ARTICLES_PER_PUSH, MAX_ARTICLES_TO_INDEX
 from core.article_fetcher import Article, fetch_and_rank_articles
 from core.rag_engine import handle_followup, index_articles, rehydrate_articles
 from core.user_profile import (
     User,
     append_message,
-    already_sent_ids,
+    already_indexed_ids,
     generate_persona_summary,
     get_user_profile,
+    mark_articles_indexed,
     mark_articles_sent,
     set_interests,
     set_onboarding_state,
@@ -97,11 +98,12 @@ def onboarding_node(state: AgentState) -> AgentState:
     return {"reply": reply}
 
 
-def _rehydrate_sent_articles(user_id: str, limit: int = 15) -> List[Article]:
-    """For follow-ups, the user may be asking about anything we've sent them
-    recently — not just today's push. Rehydrate from cache."""
-    sent = list(already_sent_ids(user_id))[-limit:]
-    return rehydrate_articles(sent)
+def _rehydrate_indexed_articles(user_id: str) -> List[Article]:
+    """Rehydrate all recently indexed articles for RAG follow-ups.
+    Uses the indexed set (up to 10 per push cycle) rather than only the 3 sent,
+    giving the RAG engine a richer corpus to answer from."""
+    indexed = list(already_indexed_ids(user_id))
+    return rehydrate_articles(indexed)
 
 
 def followup_node(state: AgentState) -> AgentState:
@@ -109,7 +111,7 @@ def followup_node(state: AgentState) -> AgentState:
     query = state.get("inbound_text", "").strip()
     append_message(user.user_id, "user", query)
 
-    articles = _rehydrate_sent_articles(user.user_id)
+    articles = _rehydrate_indexed_articles(user.user_id)
     reply = handle_followup(user, query, articles=articles or None)
     append_message(user.user_id, "assistant", reply)
     return {"reply": reply}
@@ -120,7 +122,7 @@ def proactive_fetch_node(state: AgentState) -> AgentState:
     if user.onboarding_state != "DONE":
         # skip — user hasn't finished onboarding yet
         return {"articles": [], "reply": ""}
-    articles = fetch_and_rank_articles(user, top_k=MAX_ARTICLES_PER_PUSH)
+    articles = fetch_and_rank_articles(user, top_k=MAX_ARTICLES_TO_INDEX)
     return {"articles": articles}
 
 
@@ -130,16 +132,19 @@ def proactive_format_node(state: AgentState) -> AgentState:
     if not articles:
         return {"reply": ""}
 
-    lines = [f"Your {len(articles)}-story digest:"]
-    for i, a in enumerate(articles, 1):
+    # Index all fetched articles for RAG, but only surface the top N in the digest.
+    index_articles(user.user_id, articles)
+    mark_articles_indexed(user.user_id, [a.article_id for a in articles])
+
+    digest_articles = articles[:MAX_ARTICLES_PER_PUSH]
+    lines = [f"Your {len(digest_articles)}-story digest:"]
+    for i, a in enumerate(digest_articles, 1):
         snippet = a.rationale or (a.summary or "")[:140]
         lines.append(f"{i}. {a.title} ({a.source})\n   {snippet}\n   {a.url}")
     lines.append("Reply with a question about any of these.")
     reply = "\n".join(lines)
 
-    # index for RAG and mark sent
-    index_articles(user.user_id, articles)
-    mark_articles_sent(user.user_id, [a.article_id for a in articles])
+    mark_articles_sent(user.user_id, [a.article_id for a in digest_articles])
     append_message(user.user_id, "assistant", reply)
     return {"reply": reply}
 
