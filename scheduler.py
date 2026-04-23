@@ -19,6 +19,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from agent.graph import run_proactive_push
 from core.article_fetcher import init_cache
 from core.user_profile import (
+    clear_sent_articles,
     init_db,
     is_push_due,
     list_users,
@@ -29,9 +30,9 @@ from gateway.bluebubbles import send_bluebubbles
 log = logging.getLogger(__name__)
 
 
-def _push_one(user) -> bool:
+def _push_one(user, force_refresh: bool = False) -> bool:
     try:
-        reply, articles = run_proactive_push(user.user_id)
+        reply, articles = run_proactive_push(user.user_id, force_refresh=force_refresh)
     except Exception:
         log.exception("proactive push failed for %s", user.user_id)
         return False
@@ -58,11 +59,12 @@ def push_due_users() -> None:
 
 
 def push_all_users() -> None:
-    """Force-push to every onboarded user — ignores frequency + debounce."""
+    """Force-push to every onboarded user — ignores frequency, debounce, and sent history."""
     users = [u for u in list_users() if u.onboarding_state == "DONE"]
     log.info("force-push to %d onboarded users", len(users))
     for user in users:
-        _push_one(user)
+        clear_sent_articles(user.user_id)
+        _push_one(user, force_refresh=True)
 
 
 def main() -> None:

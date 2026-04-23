@@ -28,7 +28,7 @@ from flask import Blueprint, jsonify, request
 
 from agent.graph import run_inbound
 from config import BLUEBUBBLES_PASSWORD, BLUEBUBBLES_SERVER_URL
-from core.user_profile import get_or_create_user
+from core.user_profile import get_user_by_phone
 
 log = logging.getLogger(__name__)
 
@@ -132,8 +132,12 @@ def bluebubbles_webhook():
         log.warning("BlueBubbles webhook missing phone or text: %s", event)
         return jsonify(ok=True, skipped="missing-fields")
 
+    user = get_user_by_phone(phone)
+    if user is None:
+        log.debug("ignoring message from unregistered number %s", phone)
+        return jsonify(ok=True, skipped="not-signed-up")
+
     try:
-        user = get_or_create_user(phone)
         reply = run_inbound(user.user_id, text)
     except Exception:
         log.exception("inbound handler failed for %s", phone)

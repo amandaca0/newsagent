@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -200,11 +201,9 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
 
 _ANSWER_PROMPT = """\
-You are a news assistant replying to a user over iMessage. Give a thorough, well-structured answer — don't cut important details short. Aim for 2-5 short paragraphs (or a bulleted list if the question implies multiple items), not a one-liner.
+You are a knowledgeable friend texting back over iMessage. Be direct, conversational, and concise — 2-4 short paragraphs max. Write in plain prose, no markdown, no bullet points, no headers, no bold or asterisks.
 
-Use ONLY the retrieved context to answer. If the context does not fully answer the question, be honest about what you can and cannot say, then suggest a follow-up the user could ask.
-
-Cite sources inline as [Source Name] after claims drawn from them.
+Use ONLY the retrieved context to answer. Cite sources naturally in the text, e.g. "according to CNBC" or "per the BBC". If the context is limited, say what you know and leave it there — do not tell the user to go read other sources.
 
 User's recent conversation:
 {history}
@@ -232,6 +231,16 @@ def _format_context(chunks: List[RetrievedChunk]) -> str:
     )
 
 
+def _supplement_from_external(user_id: str, query: str) -> None:
+    """Search NewsAPI for articles relevant to the query, index them so the
+    RAG engine can use them to answer questions beyond the sent digest."""
+    from core.article_fetcher import search_articles
+    articles = search_articles(query, top_k=10)
+    if articles:
+        log.info("indexed %d external articles for query %r", len(articles), query)
+        index_articles(user_id, articles)
+
+
 def handle_followup(user: User, query: str, articles: Optional[List[Article]] = None) -> str:
     """Answer a user follow-up, indexing articles on-demand if provided.
 
@@ -242,35 +251,51 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
     if articles:
         index_articles(user.user_id, articles)
 
-    chunks = retrieve(user.user_id, query, k=4)
+    # Always search externally so the answer isn't limited to the digest.
+    _supplement_from_external(user.user_id, query)
+
+    chunks = retrieve(user.user_id, query, k=6)
 
     if not chunks:
-        return ("I don't have any recent articles indexed for you yet. "
-                "Once I push your morning digest, ask me follow-ups about it.")
+        return ("I couldn't find any articles relevant to that question. "
+                "Try rephrasing, or ask about a topic from your recent digest.")
 
     def _fallback() -> str:
-        top = chunks[0]
-        return f"From {top.source} — {top.title}: {top.text[:250]}..."
+        seen = set()
+        lines = ["Here's what I found in your recent articles:"]
+        for chunk in chunks[:3]:
+            if chunk.article_id in seen:
+                continue
+            seen.add(chunk.article_id)
+            lines.append(f"\n{chunk.title} ({chunk.source})\n{chunk.url}")
+        lines.append("\nAsk me a more specific question and I'll try again.")
+        return "\n".join(lines)
 
     if not llm_configured():
         return _fallback()
 
-    try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
-        prompt = _ANSWER_PROMPT.format(
-            history=_format_history(user.conversation_history),
-            query=query,
-            context=_format_context(chunks),
-        )
-        msg = client.messages.create(
-            model=LLM_MODEL,
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return msg.content[0].text.strip()
-    except Exception as e:
-        log.warning("RAG answer LLM call failed (%s); returning top chunk", e)
-        return _fallback()
+    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    prompt = _ANSWER_PROMPT.format(
+        history=_format_history(user.conversation_history),
+        query=query,
+        context=_format_context(chunks),
+    )
+    for attempt in range(3):
+        try:
+            msg = client.messages.create(
+                model=LLM_MODEL,
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return msg.content[0].text.strip()
+        except Exception as e:
+            if "rate_limit" in str(e).lower() and attempt < 2:
+                wait = 10 * (attempt + 1)
+                log.warning("Anthropic rate limit hit, retrying in %ds (attempt %d)", wait, attempt + 1)
+                time.sleep(wait)
+            else:
+                log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
+                return _fallback()
 
 
 def rehydrate_articles(article_ids: List[str]) -> List[Article]:

@@ -9,3 +9,4 @@ data/chroma/
 .pytest_cache/
 .ipynb_checkpoints/
 .DS_Store
+.env

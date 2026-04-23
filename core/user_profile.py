@@ -331,6 +331,11 @@ def mark_articles_sent(user_id: str, article_ids: Iterable[str]) -> None:
         )
 
 
+def clear_sent_articles(user_id: str) -> None:
+    with _connect() as conn:
+        conn.execute("DELETE FROM sent_articles WHERE user_id = ?", (user_id,))
+
+
 def already_sent_ids(user_id: str) -> set[str]:
     with _connect() as conn:
         rows = conn.execute(
