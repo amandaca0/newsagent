@@ -151,7 +151,7 @@ def proactive_format_node(state: AgentState) -> AgentState:
 
     lines = [f"Your {len(articles)}-story digest:", ""]
     for i, a in enumerate(articles, 1):
-        snippet = _clean(a.rationale or (a.summary or "")[:400])
+        snippet = _clean((a.summary or "")[:400])
         lines.append(f"{i}. {a.title} ({a.source})")
         lines.append(f"   {snippet}")
         lines.append(f"   {a.url}")
