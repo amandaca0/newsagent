@@ -15,10 +15,10 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-from anthropic import Anthropic
+from groq import Groq
 
 from config import (
-    ANTHROPIC_API_KEY,
+    GROQ_API_KEY,
     CONVERSATION_HISTORY_TURNS,
     DB_PATH,
     LLM_MODEL,
@@ -30,9 +30,9 @@ log = logging.getLogger(__name__)
 def llm_configured() -> bool:
     """True only when the API key looks real — not empty and not the
     placeholder value from .env.example."""
-    if not ANTHROPIC_API_KEY:
+    if not GROQ_API_KEY:
         return False
-    if ANTHROPIC_API_KEY.endswith("...") or ANTHROPIC_API_KEY == "sk-ant-...":
+    if GROQ_API_KEY.endswith("..."):
         return False
     return True
 
@@ -370,13 +370,13 @@ def generate_persona_summary(interests: List[str]) -> str:
         return fallback
     prompt = _PERSONA_PROMPT.format(interests=", ".join(interests))
     try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
-        msg = client.messages.create(
+        client = Groq(api_key=GROQ_API_KEY)
+        msg = client.chat.completions.create(
             model=LLM_MODEL,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
-        summary = msg.content[0].text.strip()
+        summary = msg.choices[0].message.content.strip()
         from core.conv_log import log_event
         log_event(
             "llm_call",

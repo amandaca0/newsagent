@@ -20,11 +20,11 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-from anthropic import Anthropic
+from groq import Groq
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from config import ANTHROPIC_API_KEY, DB_PATH, LLM_MODEL, NEWSAPI_KEY
+from config import GROQ_API_KEY, DB_PATH, LLM_MODEL, NEWSAPI_KEY
 from core.user_profile import User, already_sent_ids, llm_configured
 
 log = logging.getLogger(__name__)
@@ -314,18 +314,18 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
     if not llm_configured():
         return prefiltered[:top_k]
 
-    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = Groq(api_key=GROQ_API_KEY)
     prompt = _RANK_PROMPT.format(
         persona=persona,
         candidates=_format_candidates(prefiltered),
     )
     try:
-        msg = client.messages.create(
+        msg = client.chat.completions.create(
             model=LLM_MODEL,
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = msg.content[0].text
+        raw = msg.choices[0].message.content
         from core.conv_log import log_event
         log_event(
             "llm_call",
@@ -345,7 +345,10 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
         aid = entry.get("article_id")
         if aid in by_id:
             art = by_id[aid]
-            art.score = float(entry.get("score", 0.0))
+            try:
+                art.score = float(entry.get("score", 0.0))
+            except (TypeError, ValueError):
+                art.score = 0.0
             art.rationale = entry.get("rationale", "")
             scored.append(art)
     scored.sort(key=lambda a: a.score, reverse=True)
