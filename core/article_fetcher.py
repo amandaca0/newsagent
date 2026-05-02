@@ -296,6 +296,33 @@ def _format_candidates(articles: List[Article]) -> str:
     return "\n".join(lines)
 
 
+_DIVERSITY_THRESHOLD = 0.60  # cosine similarity above which two articles are "same story"
+
+
+def _diversity_filter(articles: List[Article], top_k: int) -> List[Article]:
+    """Greedily select up to top_k articles, skipping any too similar to already-selected ones."""
+    if len(articles) <= top_k:
+        return articles
+    selected: List[Article] = []
+    selected_texts: List[str] = []
+    for candidate in articles:
+        if not selected_texts:
+            selected.append(candidate)
+            selected_texts.append(candidate.text_for_ranking)
+            continue
+        corpus = selected_texts + [candidate.text_for_ranking]
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=20_000)
+        matrix = vectorizer.fit_transform(corpus)
+        candidate_vec = matrix[-1]
+        sims = cosine_similarity(candidate_vec, matrix[:-1]).ravel()
+        if sims.max() < _DIVERSITY_THRESHOLD:
+            selected.append(candidate)
+            selected_texts.append(candidate.text_for_ranking)
+        if len(selected) >= top_k:
+            break
+    return selected
+
+
 def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Article]:
     """Rerank with Claude using the persona summary.
 
@@ -352,7 +379,8 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
             art.rationale = entry.get("rationale", "")
             scored.append(art)
     scored.sort(key=lambda a: a.score, reverse=True)
-    return [a for a in scored[:top_k] if a.score >= MIN_RELEVANCE_SCORE]
+    relevant = [a for a in scored if a.score >= MIN_RELEVANCE_SCORE]
+    return _diversity_filter(relevant, top_k)
 
 
 def _extract_json(text: str) -> str:
