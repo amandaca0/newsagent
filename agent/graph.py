@@ -18,7 +18,12 @@ from langgraph.graph import END, StateGraph
 
 from config import MAX_ARTICLES_PER_PUSH
 from core.article_fetcher import Article, fetch_and_rank_articles
-from core.rag_engine import handle_followup, index_articles, rehydrate_articles
+from core.rag_engine import (
+    handle_followup,
+    index_articles,
+    rehydrate_articles,
+    topic_diverse_articles,
+)
 from core.user_profile import (
     User,
     append_message,
@@ -122,7 +127,14 @@ def proactive_fetch_node(state: AgentState) -> AgentState:
         # skip — user hasn't finished onboarding yet
         return {"articles": [], "reply": ""}
     force_refresh = state.get("force_refresh", False)
-    articles = fetch_and_rank_articles(user, top_k=MAX_ARTICLES_PER_PUSH, force_refresh=force_refresh)
+    # Pull a wider candidate pool from the LLM ranker, then for each of the
+    # user's interests pick the article that best matches that interest, then
+    # take the top MAX_ARTICLES_PER_PUSH of those by relevance score. This
+    # guarantees the digest spans different topics when the user has named
+    # more than one.
+    candidate_pool = max(10, MAX_ARTICLES_PER_PUSH * 3)
+    candidates = fetch_and_rank_articles(user, top_k=candidate_pool, force_refresh=force_refresh)
+    articles = topic_diverse_articles(candidates, user.interests, k=MAX_ARTICLES_PER_PUSH)
     return {"articles": articles}
 
 

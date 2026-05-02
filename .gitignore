@@ -6,6 +6,7 @@ venv/
 .env
 data/*.db
 data/chroma/
+data/logs/
 .pytest_cache/
 .ipynb_checkpoints/
 .DS_Store

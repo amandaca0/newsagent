@@ -109,9 +109,16 @@ def _compose_welcome(u: User) -> str:
 def _send_welcome(u: User) -> None:
     """Fire off a welcome iMessage. Failures are logged, not raised, so that
     a flaky BlueBubbles server doesn't break the signup flow."""
+    body = _compose_welcome(u)
     try:
         from gateway.bluebubbles import send_bluebubbles
-        send_bluebubbles(u.phone, _compose_welcome(u))
+        send_bluebubbles(u.phone, body)
+        from core.conv_log import log_event
+        log_event(
+            "outbound_message",
+            user_id=u.user_id, phone=u.phone,
+            text=body, purpose="welcome",
+        )
     except Exception:
         log.exception("welcome message failed for %s", u.phone)
 

@@ -20,11 +20,13 @@ from agent.graph import run_proactive_push
 from core.article_fetcher import init_cache
 from core.user_profile import (
     clear_sent_articles,
+    get_user_by_phone,
     init_db,
     is_push_due,
     list_users,
     mark_pushed,
 )
+from core.conv_log import log_event
 from gateway.bluebubbles import send_bluebubbles
 
 log = logging.getLogger(__name__)
@@ -39,9 +41,20 @@ def _push_one(user, force_refresh: bool = False) -> bool:
     if not reply or not articles:
         log.info("no new articles for %s; skipping send", user.user_id)
         return False
+    log_event(
+        "proactive_digest",
+        user_id=user.user_id, phone=user.phone,
+        articles=[{"title": a.title, "source": a.source, "url": a.url} for a in articles],
+        text=reply,
+    )
     try:
         msg_id = send_bluebubbles(user.phone, reply)
         log.info("pushed %d articles to %s (msg_id=%s)", len(articles), user.phone, msg_id)
+        log_event(
+            "outbound_message",
+            user_id=user.user_id, phone=user.phone,
+            text=reply, purpose="digest",
+        )
     except Exception:
         log.exception("iMessage send failed for %s", user.phone)
         return False
@@ -65,6 +78,23 @@ def push_all_users() -> None:
     for user in users:
         clear_sent_articles(user.user_id)
         _push_one(user, force_refresh=True)
+
+
+def push_one_phone(phone: str) -> bool:
+    """Force-push to a single user by phone. Mirrors push_all_users behavior:
+    clears sent_articles and force-refreshes the article cache so something
+    new is guaranteed to land."""
+    user = get_user_by_phone(phone)
+    if user is None:
+        log.error("no user found for %s", phone)
+        return False
+    if user.onboarding_state != "DONE":
+        log.error("user %s is not onboarded yet (state=%s)",
+                  phone, user.onboarding_state)
+        return False
+    log.info("force-push to %s (%s)", phone, user.user_id)
+    clear_sent_articles(user.user_id)
+    return _push_one(user, force_refresh=True)
 
 
 def main() -> None:

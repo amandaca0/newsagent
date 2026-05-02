@@ -22,6 +22,7 @@ from sentence_transformers import SentenceTransformer
 
 from config import ANTHROPIC_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
 from core.article_fetcher import Article, get_cached_article
+from core.conv_log import log_event
 from core.user_profile import User, llm_configured
 
 log = logging.getLogger(__name__)
@@ -130,6 +131,87 @@ def index_articles(user_id: str, articles: List[Article]) -> int:
     embeddings = embedder.encode(docs, normalize_embeddings=True).tolist()
     coll.upsert(ids=ids, documents=docs, metadatas=metadatas, embeddings=embeddings)
     return len(docs)
+
+
+def topic_diverse_articles(
+    articles: List[Article], interests: List[str], k: int,
+) -> List[Article]:
+    """Pick one article per stated interest (the article whose title+summary
+    is most semantically similar to that interest), then return the top-k of
+    those by their existing LLM relevance score.
+
+    If two interests would pick the same article, the second interest falls
+    through to its next-best non-claimed article — that way different topics
+    yield different articles. If the per-interest winners are fewer than k
+    (e.g., the user listed only 1-2 interests), we pad with the next-best
+    articles by score.
+    """
+    if not articles:
+        return []
+    cleaned = [i.strip() for i in interests if i and i.strip()]
+    if not cleaned:
+        return sorted(articles, key=lambda a: a.score, reverse=True)[:k]
+
+    embedder = _get_embedder()
+    interest_vecs = np.asarray(embedder.encode(cleaned, normalize_embeddings=True))
+    article_vecs = np.asarray(embedder.encode(
+        [f"{a.title}\n{a.summary}" for a in articles],
+        normalize_embeddings=True,
+    ))
+    sims = article_vecs @ interest_vecs.T  # (n_articles, n_interests)
+
+    chosen_ids: set[str] = set()
+    chosen: List[Article] = []
+    for j in range(len(cleaned)):
+        order = np.argsort(-sims[:, j])
+        for idx in order:
+            art = articles[int(idx)]
+            if art.article_id not in chosen_ids:
+                chosen.append(art)
+                chosen_ids.add(art.article_id)
+                break
+
+    chosen.sort(key=lambda a: a.score, reverse=True)
+    if len(chosen) >= k:
+        return chosen[:k]
+    fillers = [a for a in articles if a.article_id not in chosen_ids]
+    fillers.sort(key=lambda a: a.score, reverse=True)
+    return chosen + fillers[: k - len(chosen)]
+
+
+def mmr_diversify_articles(
+    articles: List[Article], k: int, lam: float = 0.5,
+) -> List[Article]:
+    """Pick `k` articles that balance relevance with topic diversity.
+
+    Uses each article's existing `.score` (from the LLM relevance ranker) as
+    the relevance signal, and sentence-transformer embeddings of
+    title+summary as the similarity signal. Higher `lam` favors relevance,
+    lower `lam` favors diversity. With lam=0.5 a topical near-duplicate has
+    to outscore the next-best non-duplicate by a wide margin to be picked.
+    """
+    if len(articles) <= k:
+        return articles
+    embedder = _get_embedder()
+    texts = [f"{a.title}\n{a.summary}" for a in articles]
+    doc_vecs = np.asarray(embedder.encode(texts, normalize_embeddings=True))
+    rel = np.array([a.score for a in articles], dtype=float)
+
+    selected: List[int] = []
+    remaining = set(range(len(articles)))
+    for _ in range(k):
+        best_idx, best = -1, -np.inf
+        for i in remaining:
+            if not selected:
+                score = rel[i]
+            else:
+                max_sim = max(float(doc_vecs[i] @ doc_vecs[j]) for j in selected)
+                score = lam * rel[i] - (1 - lam) * max_sim
+            if score > best:
+                best, best_idx = score, i
+        selected.append(best_idx)
+        remaining.remove(best_idx)
+    return [articles[i] for i in selected]
 
 
 def _mmr(query_vec: np.ndarray, doc_vecs: np.ndarray, k: int, lam: float) -> List[int]:
@@ -287,7 +369,15 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
                 max_tokens=1500,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return msg.content[0].text.strip()
+            answer = msg.content[0].text.strip()
+            log_event(
+                "llm_call",
+                user_id=user.user_id, phone=user.phone,
+                purpose="rag_answer", model=LLM_MODEL,
+                prompt=prompt, response=answer,
+                retrieved_ids=[c.article_id for c in chunks],
+            )
+            return answer
         except Exception as e:
             if "rate_limit" in str(e).lower() and attempt < 2:
                 wait = 10 * (attempt + 1)
@@ -295,6 +385,12 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
                 time.sleep(wait)
             else:
                 log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
+                log_event(
+                    "llm_call",
+                    user_id=user.user_id, phone=user.phone,
+                    purpose="rag_answer", model=LLM_MODEL,
+                    prompt=prompt, response=f"<ERROR: {e}>",
+                )
                 return _fallback()
 
 

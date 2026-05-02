@@ -368,17 +368,22 @@ def generate_persona_summary(interests: List[str]) -> str:
     fallback = "User interested in: " + ", ".join(interests)
     if not llm_configured():
         return fallback
+    prompt = _PERSONA_PROMPT.format(interests=", ".join(interests))
     try:
         client = Anthropic(api_key=ANTHROPIC_API_KEY)
         msg = client.messages.create(
             model=LLM_MODEL,
             max_tokens=300,
-            messages=[{
-                "role": "user",
-                "content": _PERSONA_PROMPT.format(interests=", ".join(interests)),
-            }],
+            messages=[{"role": "user", "content": prompt}],
         )
-        return msg.content[0].text.strip()
+        summary = msg.content[0].text.strip()
+        from core.conv_log import log_event
+        log_event(
+            "llm_call",
+            purpose="persona_summary", model=LLM_MODEL,
+            prompt=prompt, response=summary,
+        )
+        return summary
     except Exception as e:
         log.warning("persona summary LLM call failed (%s); using keyword fallback", e)
         return fallback
