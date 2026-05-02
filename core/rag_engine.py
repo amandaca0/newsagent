@@ -17,10 +17,10 @@ from typing import List, Optional
 
 import chromadb
 import numpy as np
-from anthropic import Anthropic
+from groq import Groq
 from sentence_transformers import SentenceTransformer
 
-from config import ANTHROPIC_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
+from config import GROQ_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
 from core.article_fetcher import Article, get_cached_article
 from core.conv_log import log_event
 from core.user_profile import User, llm_configured
@@ -283,9 +283,11 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
 
 _ANSWER_PROMPT = """\
-You are a knowledgeable friend texting back over iMessage. Be direct, conversational, and concise — 2-4 short paragraphs max. Write in plain prose, no markdown, no bullet points, no headers, no bold or asterisks.
+You are a knowledgeable friend texting back over iMessage. Be warm and direct — skip the "So you're asking about X" opener and just answer. Write in plain prose, 2-4 short paragraphs max. No markdown, no bullet points, no headers, no bold or asterisks.
 
-Use ONLY the retrieved context to answer. Cite sources naturally in the text, e.g. "according to CNBC" or "per the BBC". If the context is limited, say what you know and leave it there — do not tell the user to go read other sources.
+Use the retrieved context as your primary source. For background or definitions the context doesn't cover, draw on your own knowledge — but keep it grounded. When you cite a specific article, include its URL inline naturally, e.g. "according to CNBC (https://...)" or "per a piece in the BBC (https://...)".
+
+Always end with "Anything else you want to know?" — nothing more.
 
 User's recent conversation:
 {history}
@@ -309,7 +311,7 @@ def _format_context(chunks: List[RetrievedChunk]) -> str:
     if not chunks:
         return "(no relevant passages)"
     return "\n\n".join(
-        f"[{c.source}] {c.title}\n{c.text}" for c in chunks
+        f"[{c.source}] {c.title}\n{c.url}\n{c.text}" for c in chunks
     )
 
 
@@ -356,7 +358,7 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
     if not llm_configured():
         return _fallback()
 
-    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = Groq(api_key=GROQ_API_KEY)
     prompt = _ANSWER_PROMPT.format(
         history=_format_history(user.conversation_history),
         query=query,
@@ -364,12 +366,12 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
     )
     for attempt in range(3):
         try:
-            msg = client.messages.create(
+            msg = client.chat.completions.create(
                 model=LLM_MODEL,
                 max_tokens=1500,
                 messages=[{"role": "user", "content": prompt}],
             )
-            answer = msg.content[0].text.strip()
+            answer = msg.choices[0].message.content.strip()
             log_event(
                 "llm_call",
                 user_id=user.user_id, phone=user.phone,
@@ -381,7 +383,7 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
         except Exception as e:
             if "rate_limit" in str(e).lower() and attempt < 2:
                 wait = 10 * (attempt + 1)
-                log.warning("Anthropic rate limit hit, retrying in %ds (attempt %d)", wait, attempt + 1)
+                log.warning("Groq rate limit hit, retrying in %ds (attempt %d)", wait, attempt + 1)
                 time.sleep(wait)
             else:
                 log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
