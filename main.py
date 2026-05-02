@@ -5,9 +5,11 @@
     python main.py scheduler        # run the hourly proactive-push scheduler
     python main.py push-once        # one scheduler tick now (respects frequency)
     python main.py push-all         # force-push every onboarded user (demos)
+    python main.py push <phone>     # force-push to one user by phone
     python main.py cli <phone>      # interactive REPL acting as a user
     python main.py list             # list all users
     python main.py delete <phone>   # delete a user and all their data
+    python main.py logs <phone>     # print the readable conversation log
 """
 from __future__ import annotations
 
@@ -59,6 +61,14 @@ def _push_all() -> None:
     push_all_users()
 
 
+def _push_user(phone_raw: str) -> None:
+    from scheduler import push_one_phone
+    init_db()
+    init_cache()
+    phone = normalize_phone(phone_raw) or phone_raw
+    push_one_phone(phone)
+
+
 def _list() -> None:
     init_db()
     users = list_users()
@@ -85,6 +95,16 @@ def _delete(phone_raw: str, yes: bool) -> None:
     deleted = delete_user(user.user_id)
     drop_user_collection(user.user_id)
     print(f"deleted={deleted} user_id={user.user_id}")
+
+
+def _logs(phone_raw: str) -> None:
+    from core.conv_log import per_user_path, read_user_log
+    phone = normalize_phone(phone_raw) or phone_raw
+    text = read_user_log(phone)
+    if not text:
+        print(f"no log file for {phone} (looked for {per_user_path(phone)})")
+        return
+    print(text)
 
 
 def _cli(phone: str) -> None:
@@ -116,12 +136,16 @@ def main() -> None:
     sub.add_parser("scheduler")
     sub.add_parser("push-once")
     sub.add_parser("push-all")
+    p_push = sub.add_parser("push")
+    p_push.add_argument("phone", help="phone number of the user to push to")
     sub.add_parser("list")
     p_cli = sub.add_parser("cli")
     p_cli.add_argument("phone", help="phone number in E.164 format, e.g. +15551234567")
     p_del = sub.add_parser("delete")
     p_del.add_argument("phone", help="phone number of the user to delete")
     p_del.add_argument("-y", "--yes", action="store_true", help="skip confirmation prompt")
+    p_logs = sub.add_parser("logs")
+    p_logs.add_argument("phone", help="phone number of the user")
 
     args = parser.parse_args()
     dispatch = {
@@ -130,9 +154,11 @@ def main() -> None:
         "scheduler": _scheduler,
         "push-once": _push_once,
         "push-all": _push_all,
+        "push": lambda: _push_user(args.phone),
         "list": _list,
         "cli": lambda: _cli(args.phone),
         "delete": lambda: _delete(args.phone, args.yes),
+        "logs": lambda: _logs(args.phone),
     }
     dispatch[args.cmd]()
 

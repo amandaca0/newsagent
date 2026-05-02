@@ -10,15 +10,16 @@ spend bounded.
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import logging
 import os
+import re
 import sqlite3
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-import feedparser
 from anthropic import Anthropic
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -28,16 +29,24 @@ from core.user_profile import User, already_sent_ids, llm_configured
 
 log = logging.getLogger(__name__)
 
-DEFAULT_RSS_FEEDS = [
-    "https://feeds.arstechnica.com/arstechnica/index",
-    "https://www.theverge.com/rss/index.xml",
-    "https://hnrss.org/frontpage",
-    "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
-    "https://feeds.bbci.co.uk/news/world/rss.xml",
-]
 
-CACHE_TTL_SECONDS = 60 * 60 * 6
-TFIDF_PREFILTER_K = 40
+def _strip_html(text: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = html.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+ARTICLE_STORE_DAYS = 7         # keep articles for 7 days
+FETCH_INTERVAL_SECONDS = 7200  # fetch at most every 2h (7 categories * 12/day = 84 < 100/day quota)
+TFIDF_PREFILTER_K = 15
+MIN_RELEVANCE_SCORE = 0.3
+
+# NewsAPI's seven supported categories for get_top_headlines. Fanning out
+# across all of them gives ~700 raw / ~300+ unique articles per fetch cycle.
+NEWS_CATEGORIES = [
+    "business", "entertainment", "general", "health",
+    "science", "sports", "technology",
+]
 
 
 @dataclass
@@ -61,7 +70,7 @@ class Article:
 
 
 _ARTICLE_TABLE = """
-CREATE TABLE IF NOT EXISTS articles_cache (
+CREATE TABLE IF NOT EXISTS articles (
     article_id   TEXT PRIMARY KEY,
     title        TEXT NOT NULL,
     source       TEXT NOT NULL,
@@ -71,7 +80,7 @@ CREATE TABLE IF NOT EXISTS articles_cache (
     content      TEXT NOT NULL,
     fetched_at   REAL NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_articles_fetched ON articles_cache(fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_fetched ON articles(fetched_at DESC);
 """
 
 
@@ -85,13 +94,17 @@ def _connect() -> sqlite3.Connection:
 def init_cache() -> None:
     with _connect() as conn:
         conn.executescript(_ARTICLE_TABLE)
+        # migrate old articles_cache table if it exists
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
+        if "articles_cache" in tables and "articles" not in tables:
+            conn.execute("ALTER TABLE articles_cache RENAME TO articles")
 
 
 def _article_id(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
 
 
-def _cache_put(articles: Iterable[Article]) -> None:
+def _store_articles(articles: Iterable[Article]) -> None:
     now = time.time()
     rows = [
         (a.article_id, a.title, a.source, a.url, a.published_at or "",
@@ -102,19 +115,18 @@ def _cache_put(articles: Iterable[Article]) -> None:
         return
     with _connect() as conn:
         conn.executemany(
-            "INSERT OR REPLACE INTO articles_cache "
+            "INSERT OR IGNORE INTO articles "
             "(article_id, title, source, url, published_at, summary, content, fetched_at) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
 
 
-def _cache_recent(max_age_seconds: int = CACHE_TTL_SECONDS) -> List[Article]:
-    cutoff = time.time() - max_age_seconds
+def _get_articles() -> List[Article]:
+    cutoff = time.time() - ARTICLE_STORE_DAYS * 24 * 60 * 60
     with _connect() as conn:
         rows = conn.execute(
-            "SELECT * FROM articles_cache WHERE fetched_at >= ? "
-            "ORDER BY fetched_at DESC",
+            "SELECT * FROM articles WHERE fetched_at >= ? ORDER BY fetched_at DESC",
             (cutoff,),
         ).fetchall()
     return [
@@ -131,10 +143,16 @@ def _cache_recent(max_age_seconds: int = CACHE_TTL_SECONDS) -> List[Article]:
     ]
 
 
+def _last_fetch_time() -> float:
+    with _connect() as conn:
+        row = conn.execute("SELECT MAX(fetched_at) as last FROM articles").fetchone()
+        return row["last"] or 0.0
+
+
 def get_cached_article(article_id: str) -> Optional[Article]:
     with _connect() as conn:
         row = conn.execute(
-            "SELECT * FROM articles_cache WHERE article_id = ?", (article_id,)
+            "SELECT * FROM articles WHERE article_id = ?", (article_id,)
         ).fetchone()
     if row is None:
         return None
@@ -149,34 +167,6 @@ def get_cached_article(article_id: str) -> Optional[Article]:
     )
 
 
-def _fetch_rss(feed_urls: Iterable[str]) -> List[Article]:
-    out: List[Article] = []
-    for feed_url in feed_urls:
-        try:
-            parsed = feedparser.parse(feed_url)
-        except Exception as e:
-            log.warning("RSS fetch failed for %s: %s", feed_url, e)
-            continue
-        source = parsed.feed.get("title", feed_url)
-        for entry in parsed.entries[:25]:
-            url = entry.get("link", "")
-            if not url:
-                continue
-            summary = entry.get("summary", "") or entry.get("description", "")
-            content_pieces = entry.get("content", [])
-            content = content_pieces[0].get("value", "") if content_pieces else summary
-            out.append(Article(
-                article_id=_article_id(url),
-                title=entry.get("title", "").strip(),
-                source=source,
-                url=url,
-                published_at=entry.get("published", ""),
-                summary=summary,
-                content=content,
-            ))
-    return out
-
-
 def _fetch_newsapi() -> List[Article]:
     if not NEWSAPI_KEY:
         return []
@@ -186,10 +176,47 @@ def _fetch_newsapi() -> List[Article]:
         log.warning("newsapi-python not installed; skipping")
         return []
     client = NewsApiClient(api_key=NEWSAPI_KEY)
+    out: List[Article] = []
+    for category in NEWS_CATEGORIES:
+        try:
+            resp = client.get_top_headlines(
+                language="en", category=category, page_size=100,
+            )
+        except Exception as e:
+            log.warning("NewsAPI fetch failed for category=%s: %s", category, e)
+            continue
+        for item in resp.get("articles", []):
+            url = item.get("url", "")
+            if not url:
+                continue
+            out.append(Article(
+                article_id=_article_id(url),
+                title=item.get("title") or "",
+                source=(item.get("source") or {}).get("name", "NewsAPI"),
+                url=url,
+                published_at=item.get("publishedAt"),
+                summary=item.get("description") or "",
+                content=item.get("content") or "",
+            ))
+    log.info("NewsAPI fetched %d raw articles across %d categories", len(out), len(NEWS_CATEGORIES))
+    return out
+
+
+def search_articles(query: str, top_k: int = 10) -> List[Article]:
+    """Search NewsAPI for articles matching a specific query and store them."""
+    if not NEWSAPI_KEY:
+        return []
     try:
-        resp = client.get_top_headlines(language="en", page_size=50)
+        from newsapi import NewsApiClient
+    except ImportError:
+        return []
+    client = NewsApiClient(api_key=NEWSAPI_KEY)
+    try:
+        resp = client.get_everything(
+            q=query, language="en", page_size=top_k, sort_by="relevancy"
+        )
     except Exception as e:
-        log.warning("NewsAPI fetch failed: %s", e)
+        log.warning("NewsAPI search failed for %r: %s", query, e)
         return []
     out: List[Article] = []
     for item in resp.get("articles", []):
@@ -198,28 +225,29 @@ def _fetch_newsapi() -> List[Article]:
             continue
         out.append(Article(
             article_id=_article_id(url),
-            title=item.get("title") or "",
+            title=_strip_html(item.get("title") or ""),
             source=(item.get("source") or {}).get("name", "NewsAPI"),
             url=url,
             published_at=item.get("publishedAt"),
-            summary=item.get("description") or "",
-            content=item.get("content") or "",
+            summary=_strip_html(item.get("description") or ""),
+            content=_strip_html(item.get("content") or ""),
         ))
+    _store_articles(out)
     return out
 
 
 def fetch_articles(force_refresh: bool = False) -> List[Article]:
-    """Return fresh articles, using the shared cache when possible.
+    """Fetch new articles into the persistent store and return all recent articles.
 
-    Cache is keyed globally (not per-user) so the NewsAPI quota is a
-    one-time-per-cycle cost no matter how many users we serve.
+    New articles are fetched at most once per hour to protect API rate limits.
+    force_refresh bypasses the interval check and fetches immediately.
+    Articles accumulate for ARTICLE_STORE_DAYS days, giving the agent a rich pool.
     """
-    if not force_refresh:
-        cached = _cache_recent()
-        if cached:
-            return cached
-    fetched = _fetch_newsapi() + _fetch_rss(DEFAULT_RSS_FEEDS)
-    # dedupe by article_id, preferring NewsAPI (appears first)
+    since_last = time.time() - _last_fetch_time()
+    if not force_refresh and since_last < FETCH_INTERVAL_SECONDS:
+        return _get_articles()
+
+    fetched = _fetch_newsapi()
     seen: set[str] = set()
     unique: List[Article] = []
     for a in fetched:
@@ -227,8 +255,8 @@ def fetch_articles(force_refresh: bool = False) -> List[Article]:
             continue
         seen.add(a.article_id)
         unique.append(a)
-    _cache_put(unique)
-    return unique
+    _store_articles(unique)
+    return _get_articles()
 
 
 def tfidf_rank(articles: List[Article], query: str, top_k: int = 10) -> List[Article]:
@@ -294,10 +322,18 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
     try:
         msg = client.messages.create(
             model=LLM_MODEL,
-            max_tokens=2000,
+            max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = msg.content[0].text
+        from core.conv_log import log_event
+        log_event(
+            "llm_call",
+            user_id=user.user_id, phone=user.phone,
+            purpose="article_rank", model=LLM_MODEL,
+            prompt=prompt, response=raw,
+            candidate_count=len(prefiltered),
+        )
         data = json.loads(_extract_json(raw))
     except Exception as e:
         log.warning("llm_rank parse failed, falling back to TF-IDF: %s", e)
@@ -313,20 +349,23 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
             art.rationale = entry.get("rationale", "")
             scored.append(art)
     scored.sort(key=lambda a: a.score, reverse=True)
-    return scored[:top_k]
+    return [a for a in scored[:top_k] if a.score >= MIN_RELEVANCE_SCORE]
 
 
 def _extract_json(text: str) -> str:
+    import re
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1:
         raise ValueError("no JSON object in response")
-    return text[start : end + 1]
+    raw = text[start : end + 1]
+    # strip trailing commas before ] or } (common LLM output quirk)
+    return re.sub(r",\s*([}\]])", r"\1", raw)
 
 
-def fetch_and_rank_articles(user: User, top_k: int = 5) -> List[Article]:
+def fetch_and_rank_articles(user: User, top_k: int = 5, force_refresh: bool = False) -> List[Article]:
     """Main interface consumed by the agent graph."""
-    articles = fetch_articles()
+    articles = fetch_articles(force_refresh=force_refresh)
     already = already_sent_ids(user.user_id)
     fresh = [a for a in articles if a.article_id not in already]
     return llm_rank(fresh, user, top_k=top_k)

@@ -18,7 +18,12 @@ from langgraph.graph import END, StateGraph
 
 from config import MAX_ARTICLES_PER_PUSH
 from core.article_fetcher import Article, fetch_and_rank_articles
-from core.rag_engine import handle_followup, index_articles, rehydrate_articles
+from core.rag_engine import (
+    handle_followup,
+    index_articles,
+    rehydrate_articles,
+    topic_diverse_articles,
+)
 from core.user_profile import (
     User,
     append_message,
@@ -38,6 +43,7 @@ class AgentState(TypedDict, total=False):
     user_id: str
     trigger: Literal["inbound", "proactive"]
     inbound_text: str
+    force_refresh: bool
     user: User
     articles: List[Article]
     reply: str
@@ -120,7 +126,15 @@ def proactive_fetch_node(state: AgentState) -> AgentState:
     if user.onboarding_state != "DONE":
         # skip — user hasn't finished onboarding yet
         return {"articles": [], "reply": ""}
-    articles = fetch_and_rank_articles(user, top_k=MAX_ARTICLES_PER_PUSH)
+    force_refresh = state.get("force_refresh", False)
+    # Pull a wider candidate pool from the LLM ranker, then for each of the
+    # user's interests pick the article that best matches that interest, then
+    # take the top MAX_ARTICLES_PER_PUSH of those by relevance score. This
+    # guarantees the digest spans different topics when the user has named
+    # more than one.
+    candidate_pool = max(10, MAX_ARTICLES_PER_PUSH * 3)
+    candidates = fetch_and_rank_articles(user, top_k=candidate_pool, force_refresh=force_refresh)
+    articles = topic_diverse_articles(candidates, user.interests, k=MAX_ARTICLES_PER_PUSH)
     return {"articles": articles}
 
 
@@ -130,9 +144,14 @@ def proactive_format_node(state: AgentState) -> AgentState:
     if not articles:
         return {"reply": ""}
 
+    import re
+    def _clean(text: str) -> str:
+        text = re.sub(r"[\[\(]?[…\.]{2,}[\]\)]?\s*$", "", text).strip()
+        return text
+
     lines = [f"Your {len(articles)}-story digest:", ""]
     for i, a in enumerate(articles, 1):
-        snippet = a.rationale or (a.summary or "")[:400]
+        snippet = _clean(a.rationale or (a.summary or "")[:400])
         lines.append(f"{i}. {a.title} ({a.source})")
         lines.append(f"   {snippet}")
         lines.append(f"   {a.url}")
@@ -210,9 +229,10 @@ def run_inbound(user_id: str, text: str) -> str:
     return result.get("reply", "")
 
 
-def run_proactive_push(user_id: str) -> tuple[str, List[Article]]:
+def run_proactive_push(user_id: str, force_refresh: bool = False) -> tuple[str, List[Article]]:
     result = _proactive_graph().invoke({
         "user_id": user_id,
         "trigger": "proactive",
+        "force_refresh": force_refresh,
     })
     return result.get("reply", ""), result.get("articles", [])

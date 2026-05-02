@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -21,6 +22,7 @@ from sentence_transformers import SentenceTransformer
 
 from config import ANTHROPIC_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
 from core.article_fetcher import Article, get_cached_article
+from core.conv_log import log_event
 from core.user_profile import User, llm_configured
 
 log = logging.getLogger(__name__)
@@ -131,6 +133,87 @@ def index_articles(user_id: str, articles: List[Article]) -> int:
     return len(docs)
 
 
+def topic_diverse_articles(
+    articles: List[Article], interests: List[str], k: int,
+) -> List[Article]:
+    """Pick one article per stated interest (the article whose title+summary
+    is most semantically similar to that interest), then return the top-k of
+    those by their existing LLM relevance score.
+
+    If two interests would pick the same article, the second interest falls
+    through to its next-best non-claimed article — that way different topics
+    yield different articles. If the per-interest winners are fewer than k
+    (e.g., the user listed only 1-2 interests), we pad with the next-best
+    articles by score.
+    """
+    if not articles:
+        return []
+    cleaned = [i.strip() for i in interests if i and i.strip()]
+    if not cleaned:
+        return sorted(articles, key=lambda a: a.score, reverse=True)[:k]
+
+    embedder = _get_embedder()
+    interest_vecs = np.asarray(embedder.encode(cleaned, normalize_embeddings=True))
+    article_vecs = np.asarray(embedder.encode(
+        [f"{a.title}\n{a.summary}" for a in articles],
+        normalize_embeddings=True,
+    ))
+    sims = article_vecs @ interest_vecs.T  # (n_articles, n_interests)
+
+    chosen_ids: set[str] = set()
+    chosen: List[Article] = []
+    for j in range(len(cleaned)):
+        order = np.argsort(-sims[:, j])
+        for idx in order:
+            art = articles[int(idx)]
+            if art.article_id not in chosen_ids:
+                chosen.append(art)
+                chosen_ids.add(art.article_id)
+                break
+
+    chosen.sort(key=lambda a: a.score, reverse=True)
+    if len(chosen) >= k:
+        return chosen[:k]
+    fillers = [a for a in articles if a.article_id not in chosen_ids]
+    fillers.sort(key=lambda a: a.score, reverse=True)
+    return chosen + fillers[: k - len(chosen)]
+
+
+def mmr_diversify_articles(
+    articles: List[Article], k: int, lam: float = 0.5,
+) -> List[Article]:
+    """Pick `k` articles that balance relevance with topic diversity.
+
+    Uses each article's existing `.score` (from the LLM relevance ranker) as
+    the relevance signal, and sentence-transformer embeddings of
+    title+summary as the similarity signal. Higher `lam` favors relevance,
+    lower `lam` favors diversity. With lam=0.5 a topical near-duplicate has
+    to outscore the next-best non-duplicate by a wide margin to be picked.
+    """
+    if len(articles) <= k:
+        return articles
+    embedder = _get_embedder()
+    texts = [f"{a.title}\n{a.summary}" for a in articles]
+    doc_vecs = np.asarray(embedder.encode(texts, normalize_embeddings=True))
+    rel = np.array([a.score for a in articles], dtype=float)
+
+    selected: List[int] = []
+    remaining = set(range(len(articles)))
+    for _ in range(k):
+        best_idx, best = -1, -np.inf
+        for i in remaining:
+            if not selected:
+                score = rel[i]
+            else:
+                max_sim = max(float(doc_vecs[i] @ doc_vecs[j]) for j in selected)
+                score = lam * rel[i] - (1 - lam) * max_sim
+            if score > best:
+                best, best_idx = score, i
+        selected.append(best_idx)
+        remaining.remove(best_idx)
+    return [articles[i] for i in selected]
+
+
 def _mmr(query_vec: np.ndarray, doc_vecs: np.ndarray, k: int, lam: float) -> List[int]:
     """Maximal Marginal Relevance — diversifies retrieval so we don't pull
     three near-duplicate chunks from the same article."""
@@ -200,11 +283,9 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
 
 _ANSWER_PROMPT = """\
-You are a news assistant replying to a user over iMessage. Give a thorough, well-structured answer — don't cut important details short. Aim for 2-5 short paragraphs (or a bulleted list if the question implies multiple items), not a one-liner.
+You are a knowledgeable friend texting back over iMessage. Be direct, conversational, and concise — 2-4 short paragraphs max. Write in plain prose, no markdown, no bullet points, no headers, no bold or asterisks.
 
-Use ONLY the retrieved context to answer. If the context does not fully answer the question, be honest about what you can and cannot say, then suggest a follow-up the user could ask.
-
-Cite sources inline as [Source Name] after claims drawn from them.
+Use ONLY the retrieved context to answer. Cite sources naturally in the text, e.g. "according to CNBC" or "per the BBC". If the context is limited, say what you know and leave it there — do not tell the user to go read other sources.
 
 User's recent conversation:
 {history}
@@ -232,6 +313,16 @@ def _format_context(chunks: List[RetrievedChunk]) -> str:
     )
 
 
+def _supplement_from_external(user_id: str, query: str) -> None:
+    """Search NewsAPI for articles relevant to the query, index them so the
+    RAG engine can use them to answer questions beyond the sent digest."""
+    from core.article_fetcher import search_articles
+    articles = search_articles(query, top_k=10)
+    if articles:
+        log.info("indexed %d external articles for query %r", len(articles), query)
+        index_articles(user_id, articles)
+
+
 def handle_followup(user: User, query: str, articles: Optional[List[Article]] = None) -> str:
     """Answer a user follow-up, indexing articles on-demand if provided.
 
@@ -242,35 +333,65 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
     if articles:
         index_articles(user.user_id, articles)
 
-    chunks = retrieve(user.user_id, query, k=4)
+    # Always search externally so the answer isn't limited to the digest.
+    _supplement_from_external(user.user_id, query)
+
+    chunks = retrieve(user.user_id, query, k=6)
 
     if not chunks:
-        return ("I don't have any recent articles indexed for you yet. "
-                "Once I push your morning digest, ask me follow-ups about it.")
+        return ("I couldn't find any articles relevant to that question. "
+                "Try rephrasing, or ask about a topic from your recent digest.")
 
     def _fallback() -> str:
-        top = chunks[0]
-        return f"From {top.source} — {top.title}: {top.text[:250]}..."
+        seen = set()
+        lines = ["Here's what I found in your recent articles:"]
+        for chunk in chunks[:3]:
+            if chunk.article_id in seen:
+                continue
+            seen.add(chunk.article_id)
+            lines.append(f"\n{chunk.title} ({chunk.source})\n{chunk.url}")
+        lines.append("\nAsk me a more specific question and I'll try again.")
+        return "\n".join(lines)
 
     if not llm_configured():
         return _fallback()
 
-    try:
-        client = Anthropic(api_key=ANTHROPIC_API_KEY)
-        prompt = _ANSWER_PROMPT.format(
-            history=_format_history(user.conversation_history),
-            query=query,
-            context=_format_context(chunks),
-        )
-        msg = client.messages.create(
-            model=LLM_MODEL,
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        return msg.content[0].text.strip()
-    except Exception as e:
-        log.warning("RAG answer LLM call failed (%s); returning top chunk", e)
-        return _fallback()
+    client = Anthropic(api_key=ANTHROPIC_API_KEY)
+    prompt = _ANSWER_PROMPT.format(
+        history=_format_history(user.conversation_history),
+        query=query,
+        context=_format_context(chunks),
+    )
+    for attempt in range(3):
+        try:
+            msg = client.messages.create(
+                model=LLM_MODEL,
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            answer = msg.content[0].text.strip()
+            log_event(
+                "llm_call",
+                user_id=user.user_id, phone=user.phone,
+                purpose="rag_answer", model=LLM_MODEL,
+                prompt=prompt, response=answer,
+                retrieved_ids=[c.article_id for c in chunks],
+            )
+            return answer
+        except Exception as e:
+            if "rate_limit" in str(e).lower() and attempt < 2:
+                wait = 10 * (attempt + 1)
+                log.warning("Anthropic rate limit hit, retrying in %ds (attempt %d)", wait, attempt + 1)
+                time.sleep(wait)
+            else:
+                log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
+                log_event(
+                    "llm_call",
+                    user_id=user.user_id, phone=user.phone,
+                    purpose="rag_answer", model=LLM_MODEL,
+                    prompt=prompt, response=f"<ERROR: {e}>",
+                )
+                return _fallback()
 
 
 def rehydrate_articles(article_ids: List[str]) -> List[Article]:
