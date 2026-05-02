@@ -20,7 +20,7 @@ import numpy as np
 from groq import Groq
 from sentence_transformers import SentenceTransformer
 
-from config import GROQ_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
+from config import GROQ_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL, TAVILY_API_KEY
 from core.article_fetcher import Article, get_cached_article
 from core.conv_log import log_event
 from core.user_profile import User, llm_configured
@@ -270,10 +270,15 @@ def retrieve(user_id: str, query: str, k: int = 4, fetch_k: int = 20) -> List[Re
 
     picked = _mmr(np.array(q_vec), emb, k=k, lam=_MMR_LAMBDA)
     chunks = []
+    chunks_per_article: dict[str, int] = {}
     for idx in picked:
+        aid = metas[idx]["article_id"]
+        if chunks_per_article.get(aid, 0) >= 2:
+            continue
+        chunks_per_article[aid] = chunks_per_article.get(aid, 0) + 1
         chunks.append(RetrievedChunk(
             text=docs[idx],
-            article_id=metas[idx]["article_id"],
+            article_id=aid,
             title=metas[idx]["title"],
             url=metas[idx]["url"],
             source=metas[idx]["source"],
@@ -315,6 +320,8 @@ def _format_context(chunks: List[RetrievedChunk]) -> str:
     )
 
 
+_WEB_SEARCH_THRESHOLD = 0.45  # trigger web search if best chunk score is below this
+
 def _supplement_from_external(user_id: str, query: str) -> None:
     """Search NewsAPI for articles relevant to the query, index them so the
     RAG engine can use them to answer questions beyond the sent digest."""
@@ -323,6 +330,40 @@ def _supplement_from_external(user_id: str, query: str) -> None:
     if articles:
         log.info("indexed %d external articles for query %r", len(articles), query)
         index_articles(user_id, articles)
+
+
+def _supplement_from_web(user_id: str, query: str) -> None:
+    """Tavily web search fallback for low-confidence retrievals."""
+    if not TAVILY_API_KEY:
+        return
+    try:
+        from tavily import TavilyClient
+        import hashlib
+        from core.article_fetcher import Article
+        client = TavilyClient(api_key=TAVILY_API_KEY)
+        resp = client.search(query, max_results=5)
+        articles = []
+        for r in resp.get("results", []):
+            url = r.get("url", "")
+            if not url:
+                continue
+            aid = hashlib.sha1(url.encode()).hexdigest()[:16]
+            domain = url.split("/")[2] if "/" in url else url
+            content = r.get("content", "")
+            articles.append(Article(
+                article_id=aid,
+                title=r.get("title", ""),
+                source=domain,
+                url=url,
+                published_at=None,
+                summary=content[:500],
+                content=content,
+            ))
+        if articles:
+            log.info("web search returned %d results for query %r", len(articles), query)
+            index_articles(user_id, articles)
+    except Exception as e:
+        log.warning("Tavily web search failed: %s", e)
 
 
 def handle_followup(user: User, query: str, articles: Optional[List[Article]] = None) -> str:
@@ -335,8 +376,9 @@ def handle_followup(user: User, query: str, articles: Optional[List[Article]] = 
     if articles:
         index_articles(user.user_id, articles)
 
-    # Always search externally so the answer isn't limited to the digest.
+    # Supplement with both NewsAPI and Tavily web search on every follow-up.
     _supplement_from_external(user.user_id, query)
+    _supplement_from_web(user.user_id, query)
 
     chunks = retrieve(user.user_id, query, k=6)
 
