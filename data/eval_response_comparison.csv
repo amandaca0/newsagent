@@ -1,0 +1,51 @@
+method,persona_group,user_id,question,qa_similarity,human_readability,conciseness,accuracy
+anthropic,tech_finance,u_e9535f77d2bb,Who was predicted to win the knicks and hawks game,0.0204,0.9,0.9,0.7
+anthropic,tech_finance,u_e9535f77d2bb,What is the cause of the lower job numbers,0.6264,0.85,0.7,0.65
+anthropic,tech_finance,u_e9535f77d2bb,What is google's stance on privacy in AI,0.7111,0.85,0.65,0.6
+anthropic,tech_finance,u_e9535f77d2bb,What job industries are hiring the most,0.085,0.9,0.9,0.2
+anthropic,tech_finance,u_e9535f77d2bb,What was the result of the knicks and hawks game,0.7643,0.85,0.45,0.15
+anthropic,politics_health,u_7e5cd12134ba,What are the leading causes of homelessness,0.014,0.8,0.9,0.2
+anthropic,politics_health,u_7e5cd12134ba,What are differences in women's and men's healthcare,0.5083,0.85,0.75,0.65
+anthropic,politics_health,u_7e5cd12134ba,What is the alzheimer's breakthrough,0.7873,0.85,0.7,0.3
+anthropic,politics_health,u_7e5cd12134ba,Who is John Hardy,0.6075,0.9,0.85,0.9
+anthropic,politics_health,u_7e5cd12134ba,What are new women's healthcare policies,0.5272,0.7,0.5,0.3
+anthropic,medical_history,u_0a068147f2d2,What is the Canada opposition,0.039,0.8,0.9,0.3
+anthropic,medical_history,u_0a068147f2d2,What is IRGC,0.092,0.85,0.9,0.2
+anthropic,medical_history,u_0a068147f2d2,What were some disciminatory women's health policis in the past,0.5336,0.85,0.75,0.7
+anthropic,medical_history,u_0a068147f2d2,What is Cigna,0.0073,0.8,0.9,0.2
+anthropic,medical_history,u_0a068147f2d2,What states is Cigna leaving and why,0.121,0.9,0.9,0.0
+anthropic,climate_culture,u_5f6932179bd8,What is OPEC,0.5433,0.85,0.7,0.75
+anthropic,climate_culture,u_5f6932179bd8,Who is Ella Langley,0.6762,0.85,0.7,0.5
+anthropic,climate_culture,u_5f6932179bd8,What is a K-shaped economy,0.7271,0.85,0.7,0.6
+anthropic,climate_culture,u_5f6932179bd8,What is the current discourse on country music,0.6688,0.85,0.7,0.75
+anthropic,climate_culture,u_5f6932179bd8,What effect does UAE leaving OPEC have on the US,0.0583,0.9,0.95,0.3
+anthropic,lifestyle,u_dde8a49c7575,What are the reactions to the new Chanel shoe,0.6364,0.85,0.75,0.3
+anthropic,lifestyle,u_dde8a49c7575,Whare were Greg Biffle's accomplishments,0.4456,0.85,0.75,0.15
+anthropic,lifestyle,u_dde8a49c7575,What caused the plane crash,0.4708,0.85,0.7,0.4
+anthropic,lifestyle,u_dde8a49c7575,What did 50 Cent want to hide,0.496,0.85,0.75,0.85
+anthropic,lifestyle,u_dde8a49c7575,What was the fake police report about,0.7453,0.85,0.75,0.9
+groq,tech_finance,u_923258512b43,What is evolvable AI,0.7163,0.75,0.6,0.7
+groq,tech_finance,u_923258512b43,What are some of the risks of evolvable AI,0.8003,0.75,0.55,0.65
+groq,tech_finance,u_923258512b43,What is google using AI for,0.73,0.75,0.45,0.2
+groq,tech_finance,u_923258512b43,What is overtuning,0.0985,0.9,0.95,0.2
+groq,tech_finance,u_923258512b43,What other companies are using AI besides google,0.7567,0.75,0.55,0.65
+groq,politics_health,u_dc694a2e5146,What are the leading causes of homelessness,0.7217,0.7,0.5,0.4
+groq,politics_health,u_dc694a2e5146,What are differences in women's and men's healthcare,0.5384,0.7,0.4,0.5
+groq,politics_health,u_dc694a2e5146,What is the best tine of day to exercise,0.5322,0.75,0.55,0.7
+groq,politics_health,u_dc694a2e5146,What are the leading causes of heart disease,0.5069,0.75,0.55,0.65
+groq,politics_health,u_dc694a2e5146,What are new women's healthcare policies,0.5891,0.6,0.4,0.2
+groq,medical_history,u_504bb98011af,What states are most likely to flip democratic,0.7649,0.7,0.6,0.2
+groq,medical_history,u_504bb98011af,What is the current senate split between democrats and republicans,0.7511,0.7,0.5,0.3
+groq,medical_history,u_504bb98011af,What were some discriminatory women's health policies in the past,0.2839,0.8,0.9,0.2
+groq,medical_history,u_504bb98011af,What has Asal done to help colon cancer patients,0.6839,0.7,0.4,0.5
+groq,medical_history,u_504bb98011af,What are the leading causes of colon cancer,0.7156,0.7,0.5,0.4
+groq,climate_culture,u_79b204791c34,What is OPEC,0.5785,0.7,0.4,0.5
+groq,climate_culture,u_79b204791c34,Who is Asal Sayas,0.5912,0.7,0.5,0.3
+groq,climate_culture,u_79b204791c34,What are some environmental concerns regarding the new pipeline,0.7506,0.7,0.5,0.3
+groq,climate_culture,u_79b204791c34,Will the pipeline lower oil prices in the US,0.1223,0.85,0.9,0.4
+groq,climate_culture,u_79b204791c34,What effect does the UAE leaving OPEC have on the US,0.8665,0.75,0.55,0.35
+groq,lifestyle,u_425aaf03690d,What was stolen from Greg Biffle,0.7471,0.85,0.7,0.3
+groq,lifestyle,u_425aaf03690d,How did he die,0.0647,0.9,0.8,0.7
+groq,lifestyle,u_425aaf03690d,How do people become narcissists,0.7004,0.85,0.7,0.35
+groq,lifestyle,u_425aaf03690d,What could increase life epectancy,0.6122,0.75,0.55,0.4
+groq,lifestyle,u_425aaf03690d,What is current life expectancy,0.2156,0.9,0.9,0.2

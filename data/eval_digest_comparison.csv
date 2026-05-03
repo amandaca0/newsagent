@@ -1,0 +1,46 @@
+method,persona_group,user_id,article_id,source,persona_similarity,best_interest,best_interest_similarity
+anthropic,tech_finance,u_e9535f77d2bb,dd4f064f93644539,The Action Network,0.2654,NBA basketball scores and trades,0.45
+anthropic,tech_finance,u_e9535f77d2bb,1f993725b55604bc,Yahoo Entertainment,0.1899,artificial intelligence and tech news,0.277
+anthropic,tech_finance,u_e9535f77d2bb,0bc0a5c39e641f21,Ars Technica,0.214,artificial intelligence and tech news,0.369
+anthropic,politics_health,u_7e5cd12134ba,5ca24c5bcf804832,OregonLive,0.1712,mental health and psychology,0.461
+anthropic,politics_health,u_7e5cd12134ba,2269b18bd3748c4c,WTOP,0.2403,health and fitness research,0.1998
+anthropic,politics_health,u_7e5cd12134ba,a5e026138724010c,Wired,0.1731,health and fitness research,0.1637
+anthropic,medical_history,u_0a068147f2d2,21e373a12cd81d8c,Forbes,0.1183,retirement planning and wealth management,0.158
+anthropic,medical_history,u_0a068147f2d2,2269b18bd3748c4c,WTOP,0.2905,medical research and public health,0.3095
+anthropic,medical_history,u_0a068147f2d2,4a3205497709391b,Iranintl.com,0.1313,international travel,0.2411
+anthropic,climate_culture,u_5f6932179bd8,6be6cbde181f0997,DW (English),0.2224,middle east politics,0.4283
+anthropic,climate_culture,u_5f6932179bd8,c9f03777f95a9009,Business Insider,0.2434,student debt and higher education policy,0.2144
+anthropic,climate_culture,u_5f6932179bd8,57acb865654fda75,Yahoo Entertainment,0.1379,music and culture,0.2998
+anthropic,lifestyle,u_dde8a49c7575,0dc1aa53be0cead6,Buzzfeed,0.2505,celebrity news and entertainment,0.3954
+anthropic,lifestyle,u_dde8a49c7575,58255ba37d813ea1,Wealthofgeeks.com,0.1443,celebrity news and entertainment,0.2693
+anthropic,lifestyle,u_dde8a49c7575,babb2934ebf61282,New York Post,0.063,celebrity news and entertainment,0.1308
+groq,tech_finance,u_923258512b43,ab2aa4e3288a3775,The Conversation Africa,0.2952,artificial intelligence and tech news,0.4727
+groq,tech_finance,u_923258512b43,58743c4321c978a2,Ars Technica,0.3638,artificial intelligence and tech news,0.4194
+groq,tech_finance,u_923258512b43,4d26321034c593b5,Barron's,0.315,artificial intelligence and tech news,0.5226
+groq,politics_health,u_dc694a2e5146,5ca24c5bcf804832,OregonLive,0.1599,mental health and psychology,0.461
+groq,politics_health,u_dc694a2e5146,2269b18bd3748c4c,WTOP,0.1948,health and fitness research,0.1998
+groq,politics_health,u_dc694a2e5146,2863c791f460bc13,Moneytalksnews.com,0.0764,health and fitness research,0.2967
+groq,medical_history,u_504bb98011af,2269b18bd3748c4c,WTOP,0.2882,medical research and public health,0.3095
+groq,medical_history,u_504bb98011af,27d6e178da0e8756,The Washington Post,0.2566,medical research and public health,0.268
+groq,medical_history,u_504bb98011af,8e44c614883d1fcf,NPR,0.05,American history and politics,0.1297
+groq,climate_culture,u_79b204791c34,8b077602a2eb01be,Newsweek,0.1674,middle east politics,0.3349
+groq,climate_culture,u_79b204791c34,7433e4874bc60922,NPR,0.0895,climate change and environmental policy,0.1979
+groq,climate_culture,u_79b204791c34,27d6e178da0e8756,The Washington Post,0.1372,middle east politics,0.1896
+groq,lifestyle,u_425aaf03690d,e47ff788d3704b2b,New York Post,0.1802,fashion and beauty trends,0.1636
+groq,lifestyle,u_425aaf03690d,e4b874580020e2a2,Associated Press,-0.007,social media,0.1227
+groq,lifestyle,u_425aaf03690d,6700525c4a086af8,Indiandefencereview.com,0.1352,fashion and beauty trends,0.1329
+tfidf,tech_finance,u_b0b28934bad2,71ffd15bead513f8,Associated Press,0.1704,artificial intelligence and tech news,0.4554
+tfidf,tech_finance,u_b0b28934bad2,ab2aa4e3288a3775,The Conversation Africa,0.2893,artificial intelligence and tech news,0.4727
+tfidf,tech_finance,u_b0b28934bad2,c53596abe81978b0,NPR,0.1894,cooking and food culture,0.2126
+tfidf,politics_health,u_2fcf37722bf7,5ca24c5bcf804832,OregonLive,0.19,mental health and psychology,0.461
+tfidf,politics_health,u_2fcf37722bf7,ca87095a34782cc6,TODAY,0.1465,health and fitness research,0.4166
+tfidf,politics_health,u_2fcf37722bf7,26843060592eacfd,KABC-TV,0.192,education policy and school news,0.2466
+tfidf,medical_history,u_b447aa284367,1f891dfd58f5be06,Todays-golfer.com,0.2257,golf and tennis,0.3549
+tfidf,medical_history,u_b447aa284367,2269b18bd3748c4c,WTOP,0.2792,medical research and public health,0.3095
+tfidf,medical_history,u_b447aa284367,69707bc3374654bc,Forbes,0.0454,international travel,0.1451
+tfidf,climate_culture,u_51ea902b2a8d,7ee4dfa3bd474582,Fortune,0.0712,student debt and higher education policy,0.2519
+tfidf,climate_culture,u_51ea902b2a8d,5c02a076429dd9f7,Yahoo Entertainment,0.1951,student debt and higher education policy,0.3692
+tfidf,climate_culture,u_51ea902b2a8d,57acb865654fda75,Yahoo Entertainment,0.0723,music and culture,0.2998
+tfidf,lifestyle,u_f9d440c4ffe4,da6a017f97e12b59,Fox Business,0.1679,social media,0.2094
+tfidf,lifestyle,u_f9d440c4ffe4,d86e2f6132ee2f13,PsyPost,0.0664,family life and child development,0.2876
+tfidf,lifestyle,u_f9d440c4ffe4,0da42e8948a2b6b0,The Advocate,-0.0159,celebrity news and entertainment,0.2027
