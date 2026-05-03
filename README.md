@@ -67,12 +67,22 @@ python main.py delete <phone>       # remove user's SQLite rows + Chroma collect
 
 ## Evaluation
 
-```bash
-python -m eval.evaluation --all --out eval_results.json
-python -m eval.evaluation --retrieval     # hit-rate@k on gold QA pairs
-python -m eval.evaluation --relevance     # LLM-as-Judge on pushed articles
-python -m eval.evaluation --baseline      # TF-IDF vs. LLM-ranked comparison
-```
+Set `EVAL_MODE=1` to enable inline evaluation. When active, every digest send
+and follow-up reply is automatically scored and appended to
+`data/eval_metrics.jsonl` (one JSON record per event, two event types):
+
+| Event | What's measured |
+|---|---|
+| `digest` | Per-article cosine similarity to user persona; best-matching interest topic + similarity |
+| `response` | Question–answer cosine similarity; LLM-as-Judge scores for `human_readability`, `conciseness`, `accuracy` (0–1) |
+
+The LLM-as-Judge step requires an Anthropic API key (`ANTHROPIC_API_KEY`);
+Groq is intentionally not used as the judge. If no Anthropic key is
+configured, judge scores are recorded as `null` and all other metrics still
+run.
+
+The evaluator is fully wrapped in `try/except` — a crash never affects a real
+user send.
 
 ## Layout
 
@@ -84,7 +94,7 @@ python -m eval.evaluation --baseline      # TF-IDF vs. LLM-ranked comparison
 - `gateway/bluebubbles.py` — BlueBubbles outbound sender + `/bluebubbles/webhook`
 - `gateway/web.py` — React SPA, signup + admin JSON API
 - `gateway/twilio_handler.py` — Flask app entry point; Twilio SMS backend (alternate transport)
-- `eval/evaluation.py` — relevance / retrieval / baseline metrics over `data/personas.json`
+- `core/eval_runtime.py` — inline evaluation hooks (digest relevance + LLM-as-Judge response scoring); toggled by `EVAL_MODE=1`, writes to `data/eval_metrics.jsonl`
 
 ## BlueBubbles (two-way iMessage, free, local-only)
 
