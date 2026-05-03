@@ -17,7 +17,7 @@ DB_PATH = os.getenv("NEWSAGENT_DB_PATH", "./data/newsagent.db")
 CHROMA_PATH = os.getenv("NEWSAGENT_CHROMA_PATH", "./data/chroma")
 PUBLIC_URL = os.getenv("NEWSAGENT_PUBLIC_URL", "http://localhost:5000")
 
-LLM_MODEL = os.getenv("LLM_MODEL", "claude-haiku-4-5-20251001")
+LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 PROACTIVE_PUSH_HOUR = int(os.getenv("PROACTIVE_PUSH_HOUR", "8"))

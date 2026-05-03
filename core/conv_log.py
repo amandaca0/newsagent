@@ -93,6 +93,14 @@ def _format_readable(ts: str, kind: str, p: dict) -> str:
         out.append(response.rstrip() + "\n")
         out.append(_hr())
         return "".join(out)
+    if kind == "rag_retrieval":
+        tier = p.get("tier", "?")
+        arts = p.get("articles", []) or []
+        out = [f"\n[{ts}] RAG RETRIEVAL · tier={tier} · {len(arts)} article(s)\n"]
+        for a in arts:
+            out.append(f"  - {a.get('title','(no title)')} ({a.get('source','?')})\n")
+            out.append(f"    {a.get('url','')}\n")
+        return "".join(out)
     if kind == "proactive_digest":
         articles = p.get("articles", []) or []
         out = [f"\n[{ts}] DIGEST PREPARED · {len(articles)} article(s)\n"]
