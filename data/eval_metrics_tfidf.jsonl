@@ -1,0 +1,205 @@
+{
+  "timestamp": 1777842891.753452,
+  "event_type": "digest",
+  "user_id": "u_b0b28934bad2",
+  "phone": "+15126365026",
+  "persona_summary": "This user is interested in a diverse range of topics, including sports (NBA scores and trades), personal finance and investing, food culture and cooking, travel and adventure, as well as technology (artificial intelligence and tech news), with a likely preference for consumer-focused and technical framings. They probably want in-depth analysis and updates on these topics, particularly from a practical or enthusiast's angle, such as how AI is applied in various industries or how to navigate personal finance effectively. They may not be interested in topics like politics, environmental issues, or social justice, unless they intersect with their stated interests, such as the social impact of AI or the financial aspects of sustainable travel.",
+  "interests": [
+    "NBA basketball scores and trades",
+    "personal finance and investing",
+    "cooking and food culture",
+    "travel and adventure",
+    "artificial intelligence and tech news"
+  ],
+  "articles": [
+    {
+      "article_id": "71ffd15bead513f8",
+      "title": "US military reaches deals with 7 tech companies to use their AI on classified systems - AP News",
+      "source": "Associated Press",
+      "persona_similarity": 0.1704,
+      "best_interest": "artificial intelligence and tech news",
+      "best_interest_similarity": 0.4554
+    },
+    {
+      "article_id": "ab2aa4e3288a3775",
+      "title": "Evolvable AI: are we on the brink of the next major evolutionary transition? - The Conversation",
+      "source": "The Conversation Africa",
+      "persona_similarity": 0.2893,
+      "best_interest": "artificial intelligence and tech news",
+      "best_interest_similarity": 0.4727
+    },
+    {
+      "article_id": "c53596abe81978b0",
+      "title": "How South Asian representation in gaming is growing - NPR",
+      "source": "NPR",
+      "persona_similarity": 0.1894,
+      "best_interest": "cooking and food culture",
+      "best_interest_similarity": 0.2126
+    }
+  ]
+}
+
+{
+  "timestamp": 1777842977.557166,
+  "event_type": "digest",
+  "user_id": "u_2fcf37722bf7",
+  "phone": "+15126365026",
+  "persona_summary": "User interested in: US politics and elections, health and fitness research, true crime and investigative journalism, education policy and school news, mental health and psychology",
+  "interests": [
+    "US politics and elections",
+    "health and fitness research",
+    "true crime and investigative journalism",
+    "education policy and school news",
+    "mental health and psychology"
+  ],
+  "articles": [
+    {
+      "article_id": "5ca24c5bcf804832",
+      "title": "Serious mental illness is often connected to homelessness. It doesn’t have to be, Portland professor says - OregonLive.com",
+      "source": "OregonLive",
+      "persona_similarity": 0.19,
+      "best_interest": "mental health and psychology",
+      "best_interest_similarity": 0.461
+    },
+    {
+      "article_id": "ca87095a34782cc6",
+      "title": "Stressed and Tired? These 3 Types of Movement Can Boost Energy and Mood - TODAY.com",
+      "source": "TODAY",
+      "persona_similarity": 0.1465,
+      "best_interest": "health and fitness research",
+      "best_interest_similarity": 0.4166
+    },
+    {
+      "article_id": "26843060592eacfd",
+      "title": "Whooping cough outbreak: Pasadena health officials confirm 4 cases at Don Benito Fundamental School - ABC7 Los Angeles",
+      "source": "KABC-TV",
+      "persona_similarity": 0.192,
+      "best_interest": "education policy and school news",
+      "best_interest_similarity": 0.2466
+    }
+  ]
+}
+
+{
+  "timestamp": 1777843023.828643,
+  "event_type": "digest",
+  "user_id": "u_b447aa284367",
+  "phone": "+15126365026",
+  "persona_summary": "User interested in: medical research and public health, golf and tennis, retirement planning and wealth management, international travel, American history and politics",
+  "interests": [
+    "medical research and public health",
+    "golf and tennis",
+    "retirement planning and wealth management",
+    "international travel",
+    "American history and politics"
+  ],
+  "articles": [
+    {
+      "article_id": "1f891dfd58f5be06",
+      "title": "Tour stars branded 'SELFISH' as LIV Golf bombshell escalates tensions - Today's Golfer",
+      "source": "Todays-golfer.com",
+      "persona_similarity": 0.2257,
+      "best_interest": "golf and tennis",
+      "best_interest_similarity": 0.3549
+    },
+    {
+      "article_id": "2269b18bd3748c4c",
+      "title": "America 250: Closing the gap in women’s healthcare - WTOP",
+      "source": "WTOP",
+      "persona_similarity": 0.2792,
+      "best_interest": "medical research and public health",
+      "best_interest_similarity": 0.3095
+    },
+    {
+      "article_id": "69707bc3374654bc",
+      "title": "The UAE Quit OPEC Because Its Sovereign Wealth Now Dwarfs Oil - Forbes",
+      "source": "Forbes",
+      "persona_similarity": 0.0454,
+      "best_interest": "international travel",
+      "best_interest_similarity": 0.1451
+    }
+  ]
+}
+
+{
+  "timestamp": 1777843060.272626,
+  "event_type": "digest",
+  "user_id": "u_51ea902b2a8d",
+  "phone": "+15126365026",
+  "persona_summary": "User interested in: climate change and environmental policy, music and culture, social justice and civil rights, middle east politics, student debt and higher education policy",
+  "interests": [
+    "climate change and environmental policy",
+    "music and culture",
+    "social justice and civil rights",
+    "middle east politics",
+    "student debt and higher education policy"
+  ],
+  "articles": [
+    {
+      "article_id": "7ee4dfa3bd474582",
+      "title": "‘Cut up the credit cards:’ Congress is getting brutal about ‘embarrassing’ $31 trillion national debt - Fortune",
+      "source": "Fortune",
+      "persona_similarity": 0.0712,
+      "best_interest": "student debt and higher education policy",
+      "best_interest_similarity": 0.2519
+    },
+    {
+      "article_id": "5c02a076429dd9f7",
+      "title": "‘Cut up the credit cards:’ Congress is getting brutal about ‘embarrassing’ $31 trillion national debt - Yahoo Finance",
+      "source": "Yahoo Entertainment",
+      "persona_similarity": 0.1951,
+      "best_interest": "student debt and higher education policy",
+      "best_interest_similarity": 0.3692
+    },
+    {
+      "article_id": "57acb865654fda75",
+      "title": "Everyone loves Ella Langley. Everything else about country music is up for debate. - Yahoo",
+      "source": "Yahoo Entertainment",
+      "persona_similarity": 0.0723,
+      "best_interest": "music and culture",
+      "best_interest_similarity": 0.2998
+    }
+  ]
+}
+
+{
+  "timestamp": 1777843095.8969028,
+  "event_type": "digest",
+  "user_id": "u_f9d440c4ffe4",
+  "phone": "+15126365026",
+  "persona_summary": "User interested in: real estate market and home buying, family life and child development, celebrity news and entertainment, fashion and beauty trends, social media",
+  "interests": [
+    "real estate market and home buying",
+    "family life and child development",
+    "celebrity news and entertainment",
+    "fashion and beauty trends",
+    "social media"
+  ],
+  "articles": [
+    {
+      "article_id": "da6a017f97e12b59",
+      "title": "Meta threatens to pull Facebook and Instagram from New Mexico over child safety trial requirements - Fox Business",
+      "source": "Fox Business",
+      "persona_similarity": 0.1679,
+      "best_interest": "social media",
+      "best_interest_similarity": 0.2094
+    },
+    {
+      "article_id": "d86e2f6132ee2f13",
+      "title": "Childhood trauma linked to biological aging and gaze avoidance - PsyPost",
+      "source": "PsyPost",
+      "persona_similarity": 0.0664,
+      "best_interest": "family life and child development",
+      "best_interest_similarity": 0.2876
+    },
+    {
+      "article_id": "0da42e8948a2b6b0",
+      "title": "Post Malone and Jelly Roll’s Tiger Stadium concert canceled, artist says in social media post - The Advocate",
+      "source": "The Advocate",
+      "persona_similarity": -0.0159,
+      "best_interest": "celebrity news and entertainment",
+      "best_interest_similarity": 0.2027
+    }
+  ]
+}
+

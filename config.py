@@ -32,4 +32,4 @@ EVAL_LOG_PATH = os.getenv("EVAL_LOG_PATH", "./data/eval_metrics.jsonl")
 
 # Agent LLM selection — judge always uses Anthropic, this only affects the
 # chat / ranker / persona call sites.
-AGENT_PROVIDER = os.getenv("AGENT_PROVIDER", "anthropic").lower()  # auto | anthropic | groq | tfidf
+AGENT_PROVIDER = os.getenv("AGENT_PROVIDER", "tfidf").lower()  # auto | anthropic | groq | tfidf

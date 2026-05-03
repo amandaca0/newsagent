@@ -3,23 +3,37 @@
     "id": 1,
     "name": "Marcus",
     "interests": "NBA basketball scores and trades, personal finance and investing, cooking and food culture, travel and adventure, artificial intelligence and tech news",
-    "Questions": [
+    "Questions_anthropic": [
       "Who was predicted to win the knicks and hawks game",
       "What is the cause of the lower job numbers",
       "What is google's stance on privacy in AI",
       "What job industries are hiring the most",
       "What was the result of the knicks and hawks game"
+    ],
+    "Questions_groq": [
+      "What is evolvable AI",
+      "What are some of the risks of evolvable AI",
+      "What is google using AI for",
+      "What is overtuning",
+      "What other companies are using AI besides google"
     ]
   },
   {
     "id": 2,
     "name": "Sarah",
     "interests": "US politics and elections, health and fitness research, true crime and investigative journalism, education policy and school news, mental health and psychology",
-    "Questions": [
+    "Questions_anthropic": [
       "What are the leading causes of homelessness",
       "What are differences in women's and men's healthcare",
       "What is the alzheimer's breakthrough",
       "Who is John Hardy",
+      "What are new women's healthcare policies"
+    ],
+    "Questions_groq": [
+      "What are the leading causes of homelessness",
+      "What are differences in women's and men's healthcare",
+      "What is the best time of day to exercise",
+      "What are the leading causes of heart disease",
       "What are new women's healthcare policies"
     ]
   },
@@ -29,12 +43,19 @@
     "interests": [
       "medical research and public health, golf and tennis, retirement planning and wealth management, international travel, American history and politics"
     ],
-    "Questions": [
+    "Questions_anthropic": [
       "What is the Canada opposition",
       "What is IRGC",
       "What were some disciminatory women's health policies in the past",
       "What is Cigna",
       "What states is Cigna leaving and why"
+    ],
+    "Questions_groq": [
+      "What states are most likely to flip democratic",
+      "What is the current senate split between democrats and republicans",
+      "What were some disciminatory women's health policies in the past",
+      "What has Asal done to help colon cancer patients",
+      "What are the leading causes of colon cancer"
     ]
   },
   {
@@ -43,12 +64,19 @@
     "interests": [
       "climate change and environmental policy, music and culture, social justice and civil rights, middle east politics, student debt and higher education policy"
     ],
-    "Questions": [
+    "Questions_anthropic": [
       "What is OPEC",
       "Who is Ella Langley",
       "What is a K-shaped economy",
       "What is the current discourse on country music",
       "What effect does UAE leaving OPEC have on the US"
+    ],
+    "Questions_groq": [
+      "What is OPEC",
+      "Who is Asal Sayas",
+      "What are some environmental concerns regarding the new pipeline",
+      "Will the pipeline lower oil prices in the US",
+      "What effect does the UAE leaving OPEC have on the US"
     ]
   },
   {
@@ -57,12 +85,19 @@
     "interests": [
       "real estate market and home buying, family life and child development, celebrity news and entertainment, fashion and beauty trends, social media"
     ],
-    "Questions": [
+    "Questions_anthropic": [
       "What are the reactions to the new Chanel shoe",
       "What were Greg Biffle's accomplishments",
       "What caused the plane crash",
       "What did 50 Cent want to hide",
       "What was the fake police report about"
+    ],
+    "Questions_groq": [
+      "What was stolen from Greg Biffle",
+      "How did he die",
+      "How do people become narcissists",
+      "What could increase life expectancy",
+      "What is current life expectancy"
     ]
   }
 ]
