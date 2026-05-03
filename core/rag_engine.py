@@ -365,14 +365,17 @@ _NOT_AVAILABLE_REPLY = (
 )
 
 
-def _identify_referenced_article(
+_DIGEST_RELEVANCE_THRESHOLD = 0.4
+
+
+def _best_digest_match(
     query: str, articles: List[Article],
-) -> Optional[Article]:
-    """Pick the article from the user's recent digest most likely to be
-    the one the question is about, by embedding similarity of the query
-    against each article's title+summary."""
+) -> tuple[Optional[Article], float]:
+    """Pick the digest article most similar to the query (by embedding
+    similarity of title+summary) and return it with its cosine similarity
+    score. Returns (None, 0.0) for an empty digest."""
     if not articles:
-        return None
+        return None, 0.0
     embedder = _get_embedder()
     q_vec = embedder.encode([query], normalize_embeddings=True)[0]
     article_vecs = np.asarray(embedder.encode(
@@ -380,7 +383,8 @@ def _identify_referenced_article(
         normalize_embeddings=True,
     ))
     sims = article_vecs @ q_vec
-    return articles[int(np.argmax(sims))]
+    idx = int(np.argmax(sims))
+    return articles[idx], float(sims[idx])
 
 
 def _retrieve_within(
@@ -501,58 +505,59 @@ def _answer_with_chunks(
 
 
 def handle_followup(user: User, query: str, articles: Optional[List[Article]] = None) -> str:
-    """Answer a follow-up using a tiered search:
-    1. Identify which recently-sent article the user is asking about and
-       try to answer using only that article's chunks.
-    2. If the answer isn't there, expand to the 5 most similar articles in
-       the global article cache.
-    3. If still not found, tell the user the information isn't available.
+    """Answer a follow-up with a single-pass search over 3 candidate articles.
+
+    If the question is relevant to one of the digest articles (cosine
+    similarity >= _DIGEST_RELEVANCE_THRESHOLD against title+summary), the
+    candidate set is that digest article plus the 2 most similar articles
+    in the global cache. Otherwise it is the 3 most similar articles in
+    the global cache. The LLM then either answers from those 3 or signals
+    that the information isn't available.
     """
     if articles:
         index_articles(user.user_id, articles)
 
     sent_articles = articles or []
-    referenced = _identify_referenced_article(query, sent_articles)
+    digest_article, digest_sim = _best_digest_match(query, sent_articles)
 
-    if referenced is not None:
-        log_event(
-            "rag_retrieval",
-            user_id=user.user_id, phone=user.phone,
-            tier="referenced",
-            articles=[{
-                "article_id": referenced.article_id,
-                "title": referenced.title,
-                "source": referenced.source,
-                "url": referenced.url,
-            }],
-        )
-        chunks = _retrieve_within(user.user_id, query, [referenced.article_id], k=4)
-        answer = _answer_with_chunks(user, query, chunks, purpose="rag_answer_referenced")
-        if answer is not None:
-            return answer
+    if digest_article is not None and digest_sim >= _DIGEST_RELEVANCE_THRESHOLD:
+        extras = _find_similar_articles(query, exclude_id=digest_article.article_id, k=4)
+        candidates = [digest_article] + extras
+        mode = "digest+global"
+    else:
+        candidates = _find_similar_articles(query, exclude_id=None, k=5)
+        mode = "global_only"
 
-    exclude_id = referenced.article_id if referenced is not None else None
-    similar = _find_similar_articles(query, exclude_id=exclude_id, k=5)
-    if similar:
-        log_event(
-            "rag_retrieval",
-            user_id=user.user_id, phone=user.phone,
-            tier="similar",
-            articles=[{
-                "article_id": a.article_id,
-                "title": a.title,
-                "source": a.source,
-                "url": a.url,
-            } for a in similar],
-        )
-        index_articles(user.user_id, similar)
-        chunks = _retrieve_within(
-            user.user_id, query, [a.article_id for a in similar], k=6,
-        )
-        answer = _answer_with_chunks(user, query, chunks, purpose="rag_answer_similar")
-        if answer is not None:
-            return answer
+    if not candidates:
+        return _NOT_AVAILABLE_REPLY
 
+    # Index any candidates that aren't already in this user's collection
+    # (digest articles are; global-cache picks usually aren't).
+    in_digest = {a.article_id for a in sent_articles}
+    to_index = [a for a in candidates if a.article_id not in in_digest]
+    if to_index:
+        index_articles(user.user_id, to_index)
+
+    log_event(
+        "rag_retrieval",
+        user_id=user.user_id, phone=user.phone,
+        tier=mode,
+        digest_similarity=round(digest_sim, 3),
+        articles=[{
+            "article_id": a.article_id,
+            "title": a.title,
+            "source": a.source,
+            "url": a.url,
+            "from_digest": a.article_id in in_digest,
+        } for a in candidates],
+    )
+
+    chunks = _retrieve_within(
+        user.user_id, query, [a.article_id for a in candidates], k=6,
+    )
+    answer = _answer_with_chunks(user, query, chunks, purpose="rag_answer")
+    if answer is not None:
+        return answer
     return _NOT_AVAILABLE_REPLY
 
 

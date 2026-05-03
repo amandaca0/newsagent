@@ -27,9 +27,9 @@ from core.rag_engine import (
 from core.user_profile import (
     User,
     append_message,
-    already_sent_ids,
     generate_persona_summary,
     get_user_profile,
+    latest_digest_article_ids,
     mark_articles_sent,
     set_interests,
     set_onboarding_state,
@@ -103,11 +103,11 @@ def onboarding_node(state: AgentState) -> AgentState:
     return {"reply": reply}
 
 
-def _rehydrate_sent_articles(user_id: str, limit: int = 15) -> List[Article]:
-    """For follow-ups, the user may be asking about anything we've sent them
-    recently — not just today's push. Rehydrate from cache."""
-    sent = list(already_sent_ids(user_id))[-limit:]
-    return rehydrate_articles(sent)
+def _rehydrate_sent_articles(user_id: str) -> List[Article]:
+    """Tier-1 follow-up candidates: only the articles in the user's most
+    recent digest. Scoping here (not the full sent history) prevents the
+    embedding match from snapping to stale articles from prior pushes."""
+    return rehydrate_articles(latest_digest_article_ids(user_id))
 
 
 def followup_node(state: AgentState) -> AgentState:

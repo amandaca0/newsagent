@@ -344,6 +344,23 @@ def already_sent_ids(user_id: str) -> set[str]:
         return {r["article_id"] for r in rows}
 
 
+def latest_digest_article_ids(user_id: str) -> List[str]:
+    """Article ids from this user's most recent digest — the rows whose
+    sent_at matches MAX(sent_at) for this user. All articles in a single
+    digest share one timestamp because mark_articles_sent stamps them
+    together. Order matches insertion (which matches the digest display
+    order)."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT article_id FROM sent_articles "
+            "WHERE user_id = ? AND sent_at = ("
+            "  SELECT MAX(sent_at) FROM sent_articles WHERE user_id = ?"
+            ") ORDER BY rowid",
+            (user_id, user_id),
+        ).fetchall()
+    return [r["article_id"] for r in rows]
+
+
 _PERSONA_PROMPT = """\
 You are building an embedding-friendly interest profile for a news recommendation system.
 

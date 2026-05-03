@@ -96,9 +96,12 @@ def _format_readable(ts: str, kind: str, p: dict) -> str:
     if kind == "rag_retrieval":
         tier = p.get("tier", "?")
         arts = p.get("articles", []) or []
-        out = [f"\n[{ts}] RAG RETRIEVAL · tier={tier} · {len(arts)} article(s)\n"]
+        sim = p.get("digest_similarity")
+        sim_str = f" · digest_sim={sim}" if sim is not None else ""
+        out = [f"\n[{ts}] RAG RETRIEVAL · tier={tier}{sim_str} · {len(arts)} article(s)\n"]
         for a in arts:
-            out.append(f"  - {a.get('title','(no title)')} ({a.get('source','?')})\n")
+            tag = " [digest]" if a.get("from_digest") else ""
+            out.append(f"  -{tag} {a.get('title','(no title)')} ({a.get('source','?')})\n")
             out.append(f"    {a.get('url','')}\n")
         return "".join(out)
     if kind == "proactive_digest":
