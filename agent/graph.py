@@ -18,6 +18,7 @@ from langgraph.graph import END, StateGraph
 
 from config import MAX_ARTICLES_PER_PUSH
 from core.article_fetcher import Article, fetch_and_rank_articles
+from core.eval_runtime import eval_enabled, evaluate_digest, evaluate_response
 from core.rag_engine import (
     handle_followup,
     index_articles,
@@ -118,6 +119,8 @@ def followup_node(state: AgentState) -> AgentState:
     articles = _rehydrate_sent_articles(user.user_id)
     reply = handle_followup(user, query, articles=articles or None)
     append_message(user.user_id, "assistant", reply)
+    if eval_enabled():
+        evaluate_response(user, query, reply)
     return {"reply": reply}
 
 
@@ -163,6 +166,8 @@ def proactive_format_node(state: AgentState) -> AgentState:
     index_articles(user.user_id, articles)
     mark_articles_sent(user.user_id, [a.article_id for a in articles])
     append_message(user.user_id, "assistant", reply)
+    if eval_enabled():
+        evaluate_digest(user, articles)
     return {"reply": reply}
 
 

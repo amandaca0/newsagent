@@ -24,3 +24,6 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM
 PROACTIVE_PUSH_HOUR = int(os.getenv("PROACTIVE_PUSH_HOUR", "8"))
 MAX_ARTICLES_PER_PUSH = int(os.getenv("MAX_ARTICLES_PER_PUSH", "3"))
 CONVERSATION_HISTORY_TURNS = 10
+
+EVAL_MODE = os.getenv("EVAL_MODE", "").lower() in ("1", "true", "yes")
+EVAL_LOG_PATH = os.getenv("EVAL_LOG_PATH", "./data/eval_metrics.jsonl")

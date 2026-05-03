@@ -12,6 +12,7 @@ python main.py serve               # Flask app on :5000 (signup UI, admin, webho
 python main.py scheduler           # blocking APScheduler — ticks every minute
 python main.py push-once           # one scheduler tick now (respects per-user frequency)
 python main.py push-all            # force-push to every onboarded user (ignores debounce)
+python main.py push <phone>        # force-push to a single user by phone
 python main.py cli <phone>         # interactive REPL acting as that user (no iMessage needed)
 python main.py list                # tab-separated dump of all users
 python main.py delete <phone>      # remove user's SQLite rows + Chroma collection
@@ -38,9 +39,9 @@ After schema changes to `core/user_profile.py`, callers must re-run `python main
 Two separate LangGraph pipelines live in `agent/graph.py`, both sharing the same nodes/state:
 
 - **`run_inbound(user_id, text)`** — `load_user → route_inbound → (onboarding | followup) → END`. Driven by the BlueBubbles webhook when a real user texts in. Routing is a single check on `user.onboarding_state`.
-- **`run_proactive_push(user_id, force_refresh=False)`** — `load_user → fetch → format → END`. Driven by `scheduler.py` on its minute-level cron tick.
+- **`run_proactive_push(user_id, force_refresh=False)`** — `load_user → fetch → format → END`. Driven by `scheduler.py` on its minute-level cron tick. The `fetch` node calls `fetch_and_rank_articles` (TF-IDF prefilter → LLM ranker → near-duplicate diversity filter) and then `topic_diverse_articles`, which guarantees interest coverage by picking one article per stated interest before truncating to `MAX_ARTICLES_PER_PUSH`.
 
-The followup path always reaches `core/rag_engine.handle_followup`, which is the single place the chat-side LLM is called. The proactive path only formats and indexes; it never calls the chat LLM directly.
+The followup path always reaches `core/rag_engine.handle_followup`, which is the single place the chat-side LLM is called. `handle_followup` runs a two-tier candidate selection: if the user's most recent digest contains an article whose title+summary embedding is close enough to the query (cosine ≥ `_DIGEST_RELEVANCE_THRESHOLD = 0.4`), the candidate set is that digest article plus the four most similar from the global cache; otherwise the candidates are the top-five global matches. Chunk retrieval inside the candidate set uses MMR with `λ = 0.6`. The proactive path only formats and indexes; it never calls the chat LLM directly.
 
 ### Scheduler model
 
@@ -63,13 +64,15 @@ Three storage layers with different lifecycles:
 
 ### Three LLM call sites
 
-When tracing prompt changes or token costs, these are the only places we call Claude:
+The chat / ranking / persona LLM is **Groq-hosted Llama 3.3 70B** (`LLM_MODEL` in `config.py`, default `llama-3.3-70b-versatile`), reached via the `groq` Python SDK. All three call sites instantiate `Groq(api_key=GROQ_API_KEY)` directly. There are exactly three:
 
-1. `core/rag_engine.py` — followup answer (`_ANSWER_PROMPT`). The reply users see when they text in.
-2. `core/article_fetcher.py` — article ranker (`_RANK_PROMPT`). Scores TF-IDF-prefiltered candidates against the persona summary; called once per push cycle.
+1. `core/rag_engine.py` — followup answer (`_ANSWER_PROMPT`). The reply users see when they text in. Includes a 3-attempt retry on rate-limit errors and a sentinel-token (`INFORMATION_NOT_FOUND`) abstention contract; soft-hedge phrases ("the article doesn't mention…") are post-hoc rewritten to the sentinel via `_SOFT_NOT_FOUND_PATTERNS`.
+2. `core/article_fetcher.py` — article ranker (`_RANK_PROMPT`). Scores TF-IDF-prefiltered candidates (top `TFIDF_PREFILTER_K = 15`) against the persona summary; called once per push cycle. Output is structured JSON with `score ∈ [0,1]` and a one-sentence rationale per article. Survivors are filtered by `MIN_RELEVANCE_SCORE = 0.3` and then deduplicated by TF-IDF cosine ≥ 0.60.
 3. `core/user_profile.py` — persona summary (`_PERSONA_PROMPT`). Called on signup and on every topic edit; the output is what the article ranker compares articles against.
 
-All three are gated by `llm_configured()` which treats both empty and placeholder `sk-ant-...` keys as "not configured" so the system degrades gracefully when no key is set.
+All three are gated by `llm_configured()` which treats both empty and placeholder keys (`...` suffix) as "not configured" so the system degrades gracefully — `llm_rank` falls back to TF-IDF, `generate_persona_summary` falls back to a keyword join, and `handle_followup` returns a fixed apology.
+
+Embeddings (`EMBEDDING_MODEL`, default `sentence-transformers/all-MiniLM-L6-v2`) run locally via `sentence-transformers` and are used in: Chroma indexing, MMR retrieval, the `topic_diverse_articles` per-interest selector, and `_best_digest_match` / `_find_similar_articles` in the RAG engine.
 
 ### Messaging gateway
 
@@ -90,6 +93,8 @@ The custom-time picker computes UTC at submit by `new Date().setHours(h, m); .ge
 
 ## Operational notes
 
-- NewsAPI is fetched once per cache cycle (6h) globally, not per user, to stay inside the free-tier quota.
-- `MAX_ARTICLES_PER_PUSH` (config) bounds digest size; `TFIDF_PREFILTER_K` (article_fetcher) bounds how many candidates the LLM ranker scores.
+- NewsAPI is fetched at most once per `FETCH_INTERVAL_SECONDS` (2 h) globally, not per user, to stay inside the free-tier quota. Articles persist for `ARTICLE_STORE_DAYS = 7` in the SQLite cache.
+- The fetch fans out across all seven NewsAPI top-headline categories; `search_articles` is also exposed for query-driven NewsAPI `get_everything` calls.
+- `MAX_ARTICLES_PER_PUSH` (config) bounds digest size; `TFIDF_PREFILTER_K` (article_fetcher) bounds how many candidates the LLM ranker scores; `_DIVERSITY_THRESHOLD = 0.60` is the post-rank near-duplicate cosine cutoff.
 - All schedule arithmetic is UTC. The React SPA shows the user's IANA timezone next to the time input but stores UTC.
+- `push <phone>` (in addition to `push-once` and `push-all`) force-pushes a single user; this clears their `sent_articles` and force-refreshes the article cache so something new is guaranteed to land.

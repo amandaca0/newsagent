@@ -1,0 +1,172 @@
+{
+  "timestamp": 1777795660.920192,
+  "event_type": "digest",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "persona_summary": "This user is interested in a diverse range of topics, including social issues like abortion, technology and business through the lens of Silicon Valley, and entertainment via the Kentucky Derby and The Devil Wears Prada. They may also be drawn to international news, particularly geopolitical developments in Iran, suggesting a potential interest in global affairs and foreign policy. Likely avoiding topics such as extreme sports or heavy metal music, their preferences skew towards more refined or intellectually-driven content, with a possible emphasis on feminist perspectives and cultural critique.",
+  "interests": [
+    "abortion",
+    "silicon valley",
+    "kentucky derby",
+    "iran",
+    "devil wears prada"
+  ],
+  "articles": [
+    {
+      "article_id": "102b6d5e1940c8d2",
+      "title": "Court restricts abortion access across the US by blocking the mailing of mifepristone - AP News",
+      "source": "Associated Press",
+      "persona_similarity": 0.1554,
+      "best_interest": "abortion",
+      "best_interest_similarity": 0.449
+    },
+    {
+      "article_id": "c039fc8e782b3a36",
+      "title": "Iran 'will be participating' at World Cup, including games in U.S., FIFA chief says - NBC News",
+      "source": "NBC News",
+      "persona_similarity": 0.3057,
+      "best_interest": "iran",
+      "best_interest_similarity": 0.4842
+    },
+    {
+      "article_id": "537a0f0c585716db",
+      "title": "‘The Devil Wears Prada 2’ Strikes A Pose Thursday Night With $10M Previews, $50M+ WW – Box Office Update - Deadline",
+      "source": "Deadline",
+      "persona_similarity": 0.2479,
+      "best_interest": "devil wears prada",
+      "best_interest_similarity": 0.6753
+    }
+  ]
+}
+
+{
+  "timestamp": 1777795883.6801379,
+  "event_type": "response",
+  "user_id": "u_6a7ed2e3da07",
+  "phone": "5126365026",
+  "question": "can you send a digest now",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.0403,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.0
+  }
+}
+
+{
+  "timestamp": 1777796375.7304971,
+  "event_type": "digest",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "persona_summary": "This user is interested in a diverse range of topics, including social issues like abortion, technology and business through the lens of Silicon Valley, and entertainment via the Kentucky Derby and The Devil Wears Prada. They may also be drawn to international news, particularly geopolitical developments in Iran, suggesting a potential interest in global affairs and foreign policy. Likely avoiding topics such as extreme sports or heavy metal music, their preferences skew towards more refined or intellectually-driven content, with a possible emphasis on feminist perspectives and cultural critique.",
+  "interests": [
+    "abortion",
+    "silicon valley",
+    "kentucky derby",
+    "iran",
+    "devil wears prada"
+  ],
+  "articles": [
+    {
+      "article_id": "102b6d5e1940c8d2",
+      "title": "Court restricts abortion access across the US by blocking the mailing of mifepristone - AP News",
+      "source": "Associated Press",
+      "persona_similarity": 0.1554,
+      "best_interest": "abortion",
+      "best_interest_similarity": 0.449
+    },
+    {
+      "article_id": "537a0f0c585716db",
+      "title": "‘The Devil Wears Prada 2’ Strikes A Pose Thursday Night With $10M Previews, $50M+ WW – Box Office Update - Deadline",
+      "source": "Deadline",
+      "persona_similarity": 0.2479,
+      "best_interest": "devil wears prada",
+      "best_interest_similarity": 0.6753
+    },
+    {
+      "article_id": "cff73b9c9afad9bc",
+      "title": "Meet the Kentucky Derby horses running in the 2026 race - CBS News",
+      "source": "CBS News",
+      "persona_similarity": 0.1379,
+      "best_interest": "kentucky derby",
+      "best_interest_similarity": 0.6756
+    }
+  ]
+}
+
+{
+  "timestamp": 1777796393.861321,
+  "event_type": "response",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "question": "Where is the kentucky derby held",
+  "answer": "The Kentucky Derby is held in Louisville, Kentucky, according to CBS News (https://www.cbsnews.com/news/kentucky-derby-horses-2026/). It's specifically held at Churchill Downs, as mentioned in an article by SportsLine (https://www.sportsline.com/insiders/2026-churchill-downs-morning-line-odds-racing-writer-gives-turf-pick-4-picks-for-kentucky-oaks-day/). \n\nAnything else you want to know?",
+  "qa_similarity": 0.7903,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.8,
+    "accuracy": 1.0
+  }
+}
+
+{
+  "timestamp": 1777796416.600919,
+  "event_type": "response",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "question": "what is mifepristone",
+  "answer": "Mifepristone is a medication used for abortion, according to AP News (https://apnews.com/article/abortion-pills-mail-louisiana-ruling-40d60a9bf6212480e527480757b603c3) and NPR (https://www.npr.org/2026/05/01/nx-s1-5808328/court-restricts-abortion-access-mailing-mifepristone). It's one of the most common means of abortion in the US. \n\nA federal appeals court has restricted access to it by blocking the mailing of prescriptions, as reported by AP News. The court's ruling affects access to the medication across the US. \n\nAnything else you want to know?",
+  "qa_similarity": 0.5934,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.8,
+    "accuracy": 0.9
+  }
+}
+
+{
+  "timestamp": 1777796440.761577,
+  "event_type": "response",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "question": "what is devil wears prada 2 about",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": -0.0574,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.0
+  }
+}
+
+{
+  "timestamp": 1777796457.7800891,
+  "event_type": "response",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "question": "what is the triple crown",
+  "answer": "The Triple Crown is a series of three prestigious horse racing events, with the Kentucky Derby being the first leg of the competition, according to CBS News (https://www.cbsnews.com/news/kentucky-derby-horses-2026/). The other two legs are not specified in the article, but they are typically the Preakness Stakes and the Belmont Stakes. \n\nThe Kentucky Derby is often referred to as the \"Run for the Roses\" and is held in Louisville, Kentucky. It's a significant event in the world of horse racing, with a full field of 20 horses competing for the top spot. \n\nAnything else you want to know?",
+  "qa_similarity": 0.7159,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.6,
+    "accuracy": 0.9
+  }
+}
+
+{
+  "timestamp": 1777796479.418544,
+  "event_type": "response",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "question": "who is the favorite to win the kentucky derby",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": -0.1468,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.0
+  }
+}
+

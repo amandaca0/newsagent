@@ -6,7 +6,7 @@
     python main.py push-once        # one scheduler tick now (respects frequency)
     python main.py push-all         # force-push every onboarded user (demos)
     python main.py push <phone>     # force-push to one user by phone
-    python main.py cli <phone>      # interactive REPL acting as a user
+    python main.py cli <phone>      # local mirror of BlueBubbles flow: digest + REPL
     python main.py list             # list all users
     python main.py delete <phone>   # delete a user and all their data
     python main.py logs <phone>     # print the readable conversation log
@@ -17,15 +17,17 @@ import argparse
 import logging
 import sys
 
-from agent.graph import run_inbound
+from agent.graph import run_inbound, run_proactive_push
 from core.article_fetcher import init_cache
+from core.conv_log import log_event
 from core.rag_engine import drop_user_collection
 from core.user_profile import (
+    clear_sent_articles,
     delete_user,
-    get_or_create_user,
     get_user_by_phone,
     init_db,
     list_users,
+    mark_pushed,
 )
 from gateway.web import normalize_phone
 
@@ -107,23 +109,80 @@ def _logs(phone_raw: str) -> None:
     print(text)
 
 
-def _cli(phone: str) -> None:
+def _cli(phone_raw: str) -> None:
+    """Local mirror of the BlueBubbles flow — no iMessage required.
+
+    Looks up an already-registered, onboarded user, force-pushes a digest to
+    the terminal (mirroring scheduler.push_one_phone), then drops into a REPL
+    where each line is sent through run_inbound and the reply is printed.
+    Eval metrics fire automatically through the graph hooks when EVAL_MODE=1.
+    """
     init_db()
     init_cache()
-    user = get_or_create_user(phone)
-    print(f"talking as {user.user_id} ({user.phone}). Ctrl-D to exit.")
-    # nudge onboarding if needed
-    if user.onboarding_state == "NEEDS_ONBOARDING":
-        print("assistant:", run_inbound(user.user_id, ""))
+    phone = normalize_phone(phone_raw) or phone_raw
+    user = get_user_by_phone(phone)
+    if user is None:
+        print(f"no user found for {phone}. Sign up at the web UI first.")
+        return
+    if user.onboarding_state != "DONE":
+        print(f"user {phone} is not onboarded yet (state={user.onboarding_state}).")
+        return
+
+    print(f"talking as {user.user_id} ({user.phone}). Ctrl-D to exit.\n")
+
+    # --- digest push (mirror push_one_phone, but print instead of BlueBubbles) ---
+    clear_sent_articles(user.user_id)
+    try:
+        reply, articles = run_proactive_push(user.user_id, force_refresh=True)
+    except Exception:
+        logging.getLogger(__name__).exception("proactive push failed")
+        reply, articles = "", []
+
+    if reply and articles:
+        log_event(
+            "proactive_digest",
+            user_id=user.user_id, phone=user.phone,
+            articles=[{"title": a.title, "source": a.source, "url": a.url} for a in articles],
+            text=reply,
+        )
+        log_event(
+            "outbound_message",
+            user_id=user.user_id, phone=user.phone,
+            text=reply, purpose="digest",
+        )
+        mark_pushed(user.user_id)
+        print("assistant:")
+        print(reply)
+        print()
+    else:
+        print("(no new articles to send right now — entering REPL anyway)\n")
+
+    # --- follow-up REPL (mirror bluebubbles_webhook inbound path) ---
+    # Re-fetch the user so conversation_history reflects the digest we just sent.
+    user = get_user_by_phone(phone)
     while True:
         try:
             text = input("you: ")
         except (EOFError, KeyboardInterrupt):
             print()
             return
-        if not text.strip():
+        text = text.strip()
+        if not text:
             continue
-        print("assistant:", run_inbound(user.user_id, text))
+        log_event("inbound_message", user_id=user.user_id, phone=user.phone, text=text)
+        try:
+            reply = run_inbound(user.user_id, text)
+        except Exception:
+            logging.getLogger(__name__).exception("inbound handler failed")
+            print("assistant: (handler error — see logs)\n")
+            continue
+        if reply:
+            log_event(
+                "outbound_message",
+                user_id=user.user_id, phone=user.phone,
+                text=reply, purpose="rag_reply",
+            )
+            print(f"assistant: {reply}\n")
 
 
 def main() -> None:
