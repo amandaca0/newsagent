@@ -29,6 +29,11 @@ from core.user_profile import User, already_sent_ids, llm_configured
 
 log = logging.getLogger(__name__)
 
+# trafilatura's downloader retries on redirect/timeout; the urllib3 noise
+# isn't actionable for us — we already log a debug message on scrape failure.
+logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
+logging.getLogger("trafilatura.downloads").setLevel(logging.CRITICAL)
+
 
 def _strip_html(text: str) -> str:
     text = re.sub(r"<[^>]+>", " ", text)
@@ -120,6 +125,144 @@ def _store_articles(articles: Iterable[Article]) -> None:
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             rows,
         )
+
+
+def _update_article_content(article_id: str, content: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE articles SET content = ? WHERE article_id = ?",
+            (content, article_id),
+        )
+
+
+# ---------- full-text scraping ----------
+
+# NewsAPI's free tier truncates `content` at ~200 chars and appends a marker
+# like "[+1234 chars]". Anything matching this pattern (or just very short)
+# is a candidate for scraping the publisher URL to recover the full body.
+_TRUNCATION_MARKER = re.compile(r"\[\+\d+\s*chars\]\s*$")
+_MIN_FULL_TEXT_CHARS = 600       # below this we treat content as "stub"
+_SCRAPE_TIMEOUT_SECS = 10
+_SCRAPE_MAX_WORKERS = 5
+
+_TRAFILATURA_CONFIG = None
+
+
+def _trafilatura_config():
+    """Cached trafilatura config with our wall-clock cap. Built lazily so
+    importing article_fetcher doesn't pay the trafilatura import cost."""
+    global _TRAFILATURA_CONFIG
+    if _TRAFILATURA_CONFIG is None:
+        from trafilatura.settings import use_config
+        cfg = use_config()
+        cfg.set("DEFAULT", "DOWNLOAD_TIMEOUT", str(_SCRAPE_TIMEOUT_SECS))
+        cfg.set("DEFAULT", "EXTRACTION_TIMEOUT", str(_SCRAPE_TIMEOUT_SECS))
+        _TRAFILATURA_CONFIG = cfg
+    return _TRAFILATURA_CONFIG
+
+
+def _is_truncated(content: str) -> bool:
+    if not content:
+        return True
+    if _TRUNCATION_MARKER.search(content):
+        return True
+    return len(content) < _MIN_FULL_TEXT_CHARS
+
+
+_SCRAPE_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _scrape_full_text(url: str) -> Optional[str]:
+    """Fetch `url` and return the article body as plain text. Returns None
+    when the site blocks us, times out, or trafilatura can't extract.
+
+    Uses requests.get directly (instead of trafilatura.fetch_url) so we get
+    a single-shot timeout — trafilatura's downloader retries internally
+    on read timeout, blowing past _SCRAPE_TIMEOUT_SECS by ~4x."""
+    try:
+        import requests
+        import trafilatura
+    except ImportError:
+        return None
+    try:
+        resp = requests.get(
+            url,
+            timeout=_SCRAPE_TIMEOUT_SECS,
+            allow_redirects=True,
+            headers=_SCRAPE_HEADERS,
+        )
+        if resp.status_code != 200 or not resp.text:
+            return None
+        text = trafilatura.extract(
+            resp.text,
+            include_comments=False,
+            include_tables=False,
+            favor_recall=True,
+            config=_trafilatura_config(),
+        )
+        if not text:
+            return None
+        text = text.strip()
+        return text or None
+    except Exception as e:
+        log.debug("scrape failed for %s: %s", url, e)
+        return None
+
+
+def enrich_with_full_text(articles: List[Article]) -> List[Article]:
+    """For each article whose `content` looks truncated, scrape its URL and
+    replace the content (and persist to SQLite). Mutates the Article objects
+    in-place and returns the same list. Failures keep the original truncated
+    content. Scraping runs in a small thread pool so a slow site doesn't
+    serialise the rest."""
+    if not articles:
+        return articles
+    targets = [a for a in articles if _is_truncated(a.content)]
+    if not targets:
+        return articles
+
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout, as_completed
+    by_id = {a.article_id: a for a in targets}
+
+    # Aggregate worst-case: ceil(len/workers) batches, each up to per-call
+    # timeout, plus a few seconds of slack for thread/scheduling overhead.
+    import math
+    batches = max(1, math.ceil(len(targets) / _SCRAPE_MAX_WORKERS))
+    total_timeout = _SCRAPE_TIMEOUT_SECS * batches + 5
+
+    with ThreadPoolExecutor(max_workers=_SCRAPE_MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(_scrape_full_text, a.url): a.article_id
+            for a in targets
+        }
+        try:
+            for fut in as_completed(futures, timeout=total_timeout):
+                aid = futures[fut]
+                try:
+                    text = fut.result(timeout=_SCRAPE_TIMEOUT_SECS)
+                except Exception:
+                    text = None
+                if not text:
+                    continue
+                art = by_id[aid]
+                art.content = text
+                try:
+                    _update_article_content(aid, text)
+                except Exception as e:
+                    log.debug("persist scraped content failed for %s: %s", aid, e)
+        except FutTimeout:
+            unfinished = sum(1 for f in futures if not f.done())
+            log.debug("scrape aggregate timeout; %d/%d futures unfinished",
+                      unfinished, len(futures))
+
+    return articles
 
 
 def _get_articles() -> List[Article]:

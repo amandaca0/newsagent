@@ -29,3 +29,7 @@ CONVERSATION_HISTORY_TURNS = 10
 
 EVAL_MODE = os.getenv("EVAL_MODE", "").lower() in ("1", "true", "yes")
 EVAL_LOG_PATH = os.getenv("EVAL_LOG_PATH", "./data/eval_metrics.jsonl")
+
+# Agent LLM selection — judge always uses Anthropic, this only affects the
+# chat / ranker / persona call sites.
+AGENT_PROVIDER = os.getenv("AGENT_PROVIDER", "anthropic").lower()  # auto | anthropic | groq | tfidf

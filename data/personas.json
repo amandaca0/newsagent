@@ -2,61 +2,67 @@
   {
     "id": 1,
     "name": "Marcus",
-    "interests": [
-      "NBA basketball scores and trades",
-      "personal finance and investing",
-      "cooking and food culture",
-      "travel and adventure",
-      "artificial intelligence and tech news"
-    ],
-    "persona_summary": "A software engineer in his early 30s who follows NBA basketball closely (trades, standings, player news) and keeps tabs on personal finance and investing. Outside of work he cooks seriously, plans travel trips, and stays current on AI and tech developments. Prefers practical, specific information over opinion pieces. Not interested in politics, celebrity gossip, or most other sports."
+    "interests": "NBA basketball scores and trades, personal finance and investing, cooking and food culture, travel and adventure, artificial intelligence and tech news",
+    "Questions": [
+      "Who was predicted to win the knicks and hawks game",
+      "What is the cause of the lower job numbers",
+      "What is google's stance on privacy in AI",
+      "What job industries are hiring the most",
+      "What was the result of the knicks and hawks game"
+    ]
   },
   {
     "id": 2,
     "name": "Sarah",
-    "interests": [
-      "US politics and elections",
-      "health and fitness research",
-      "true crime and investigative journalism",
-      "education policy and school news",
-      "mental health and psychology"
-    ],
-    "persona_summary": "A high school teacher in her mid-40s who closely follows US politics, education policy, and school funding news. She runs regularly and pays attention to health and fitness research. In her downtime she listens to true crime podcasts and follows investigative journalism. She also cares about mental health \u2014 both for herself and her students. Not interested in business news, sports, or celebrity entertainment."
+    "interests": "US politics and elections, health and fitness research, true crime and investigative journalism, education policy and school news, mental health and psychology",
+    "Questions": [
+      "What are the leading causes of homelessness",
+      "What are differences in women's and men's healthcare",
+      "What is the alzheimer's breakthrough",
+      "Who is John Hardy",
+      "What are new women's healthcare policies"
+    ]
   },
   {
     "id": 3,
     "name": "David",
     "interests": [
-      "medical research and public health",
-      "golf and tennis",
-      "retirement planning and wealth management",
-      "international travel",
-      "American history and politics"
+      "medical research and public health, golf and tennis, retirement planning and wealth management, international travel, American history and politics"
     ],
-    "persona_summary": "A retired physician in his early 60s who stays current on medical research and public health developments \u2014 particularly cardiology, oncology, and aging. He golfs regularly and follows the PGA Tour. He actively manages his retirement portfolio and reads about wealth management strategies. He travels internationally several times a year and is deeply interested in American history and current political affairs. Not interested in pop culture, social media trends, or technology for its own sake."
+    "Questions": [
+      "What is the Canada opposition",
+      "What is IRGC",
+      "What were some disciminatory women's health policies in the past",
+      "What is Cigna",
+      "What states is Cigna leaving and why"
+    ]
   },
   {
     "id": 4,
     "name": "Emma",
     "interests": [
-      "climate change and environmental policy",
-      "indie music, concerts, and the music industry",
-      "social justice and civil rights",
-      "mental health awareness and resources",
-      "student debt and higher education policy"
+      "climate change and environmental policy, music and culture, social justice and civil rights, middle east politics, student debt and higher education policy"
     ],
-    "persona_summary": "A 21-year-old college junior who is passionate about climate activism and follows environmental policy closely. She goes to concerts regularly and follows the indie music scene \u2014 new releases, tour announcements, record label news. She cares deeply about social justice issues and mental health destigmatization. Student loan and higher education policy affects her directly and she tracks it closely. Not interested in business news, sports, or mainstream celebrity gossip."
+    "Questions": [
+      "What is OPEC",
+      "Who is Ella Langley",
+      "What is a K-shaped economy",
+      "What is the current discourse on country music",
+      "What effect does UAE leaving OPEC have on the US"
+    ]
   },
   {
     "id": 5,
     "name": "Linda",
     "interests": [
-      "real estate market and home buying",
-      "parenting, child development, and family life",
-      "celebrity news and entertainment",
-      "fashion and beauty trends",
-      "marketing, branding, and social media"
+      "real estate market and home buying, family life and child development, celebrity news and entertainment, fashion and beauty trends, social media"
     ],
-    "persona_summary": "A marketing manager in her late 30s who follows the real estate market closely \u2014 she and her husband are actively looking to buy a home. She has two young kids and reads parenting and child development content. She enjoys celebrity news, keeps up with fashion trends, and professionally stays current on marketing strategy and social media platform changes. Not interested in hard politics, financial markets, or sports."
+    "Questions": [
+      "What are the reactions to the new Chanel shoe",
+      "What were Greg Biffle's accomplishments",
+      "What caused the plane crash",
+      "What did 50 Cent want to hide",
+      "What was the fake police report about"
+    ]
   }
 ]

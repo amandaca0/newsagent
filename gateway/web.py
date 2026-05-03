@@ -25,6 +25,7 @@ from core.user_profile import (
     list_users,
     set_frequency,
     set_interests,
+    set_name,
     set_onboarding_state,
     set_persona_summary,
 )
@@ -123,8 +124,9 @@ def _user_payload(u: User) -> dict:
 def _compose_welcome(u: User) -> str:
     topics = ", ".join(u.interests) if u.interests else "(no topics set)"
     schedule = _frequency_label(u.frequency)
+    greeting = f"Welcome to NewsAgent, {u.name}!" if u.name else "Welcome to NewsAgent!"
     return (
-        "Welcome to NewsAgent!\n\n"
+        f"{greeting}\n\n"
         f"I'll send you personalized news digests covering: {topics}\n\n"
         f"Schedule: {schedule}\n\n"
         "Reply to any digest with a follow-up question and I'll answer using "
@@ -156,6 +158,7 @@ def signup_submit():
         data = request.form  # fallback for plain form posts
 
     phone = normalize_phone(data.get("phone", ""))
+    name = (data.get("name") or "").strip()
     topics = _parse_topics(data.get("topics", ""))
     frequency = data.get("frequency", "morning_9am")
     custom_hour, custom_minute, custom_hour_2, custom_minute_2 = _parse_schedule_times(data, frequency)
@@ -163,6 +166,8 @@ def signup_submit():
     errors = []
     if phone is None:
         errors.append("That phone number didn't look valid.")
+    if not name:
+        errors.append("Tell us your name.")
     if len(topics) < 5:
         errors.append("Add at least 5 topics.")
     if frequency not in FREQUENCY_CHOICES:
@@ -174,6 +179,7 @@ def signup_submit():
         return jsonify(ok=False, error=" ".join(errors)), 400
 
     user = get_or_create_user(phone)
+    set_name(user.user_id, name)
     set_interests(user.user_id, topics)
     set_persona_summary(user.user_id, generate_persona_summary(topics))
     set_frequency(
@@ -206,6 +212,13 @@ def api_update_user(user_id: str):
         return jsonify(ok=False, error="user not found"), 404
 
     errors: list[str] = []
+
+    if "name" in data:
+        name = (data.get("name") or "").strip()
+        if not name:
+            errors.append("Name cannot be empty.")
+        else:
+            set_name(user_id, name)
 
     # topics — regenerate persona summary when they change
     if "topics" in data:

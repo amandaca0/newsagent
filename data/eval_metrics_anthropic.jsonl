@@ -1,0 +1,580 @@
+{
+  "timestamp": 1777838505.897486,
+  "event_type": "digest",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "persona_summary": "This user seeks timely updates on NBA transactions and game results, alongside practical personal finance and investment guidance; they're drawn to cultural and experiential content spanning culinary arts, global travel, and cutting-edge AI/technology developments, with an emphasis on actionable insights and lifestyle applications rather than abstract theory. They likely have low interest in celebrity gossip, local news, or purely academic technical content disconnected from real-world impact.",
+  "interests": [
+    "NBA basketball scores and trades",
+    "personal finance and investing",
+    "cooking and food culture",
+    "travel and adventure",
+    "artificial intelligence and tech news"
+  ],
+  "articles": [
+    {
+      "article_id": "dd4f064f93644539",
+      "title": "Knicks vs Hawks Prediction, Picks, Odds for NBA Playoffs Game 6 Tonight 4/30 - Action Network",
+      "source": "The Action Network",
+      "persona_similarity": 0.2654,
+      "best_interest": "NBA basketball scores and trades",
+      "best_interest_similarity": 0.45
+    },
+    {
+      "article_id": "1f993725b55604bc",
+      "title": "‘Wow!’: CNBC host stunned as ‘truly incredible’ US jobs number plunges to 189,000 — the lowest level since 1960s - Yahoo Finance",
+      "source": "Yahoo Entertainment",
+      "persona_similarity": 0.1899,
+      "best_interest": "artificial intelligence and tech news",
+      "best_interest_similarity": 0.277
+    },
+    {
+      "article_id": "0bc0a5c39e641f21",
+      "title": "The hidden cost of Google’s AI defaults and the illusion of choice - Ars Technica",
+      "source": "Ars Technica",
+      "persona_similarity": 0.214,
+      "best_interest": "artificial intelligence and tech news",
+      "best_interest_similarity": 0.369
+    }
+  ]
+}
+
+{
+  "timestamp": 1777838559.007218,
+  "event_type": "response",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "question": "Who was predicted to win the knicks and hawks game",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.0204,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.9,
+    "accuracy": 0.7
+  }
+}
+
+{
+  "timestamp": 1777838592.24305,
+  "event_type": "response",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "question": "What is the cause of the lower job numbers",
+  "answer": "The lower job numbers are being driven by a few things coming together. Trump's tariff rollouts have been creating uncertainty that's made companies hesitant to hire, and there was also a purge of federal workforce jobs. On top of that, high interest rates that were kept elevated to fight inflation have had lingering effects on the job market (according to PBS https://www.pbs.org/newshour/economy/weekly-u-s-jobless-claims-fall-to-189,000-lowest-in-more-than-five-decades). Companies like Amazon, UPS, Block and Morgan Stanley have been cutting jobs too, which shows how widespread the slowdown is. Overall the labor market is stuck in what Reuters calls a \"low hire, low fire\" mode — companies just aren't bringing people on the way they used to.\n\nAnything else you want to know?",
+  "qa_similarity": 0.6264,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.65
+  }
+}
+
+{
+  "timestamp": 1777838632.8967319,
+  "event_type": "response",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "question": "What is google's stance on privacy in AI",
+  "answer": "Google says it respects user privacy and doesn't train its foundational AI models on your personal content, but the reality is more complicated than that (according to Ars Technica https://arstechnica.com/ai/2026/04/googles-privacy-maze-how-gemini-traps-you-and-your-data/). When you use Gemini in Workspace apps like Gmail or Drive, Google processes your data for \"isolated tasks\" but claims it doesn't save or use that content to train their models. A Google spokesperson emphasized that \"protecting users' privacy and control over their data is fundamental to how we develop and deploy AI.\"\n\nThe catch is that Google has a history of blurring these lines. They've had to repeatedly clarify when they do and don't use your data, especially as they've rolled Gemini deeper into products like Gmail. The company also uses your broader web activity and vital statistics for ad targeting, which you can technically disable but most people accept by default. So while Google's official stance is privacy-focused, the actual implementation leaves a lot of gray area about what happens to your information.\n\nAnything else you want to know?",
+  "qa_similarity": 0.7111,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.65,
+    "accuracy": 0.6
+  }
+}
+
+{
+  "timestamp": 1777838669.2618492,
+  "event_type": "response",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "question": "What job industries are hiring the most",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.085,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.9,
+    "accuracy": 0.2
+  }
+}
+
+{
+  "timestamp": 1777838723.1903412,
+  "event_type": "response",
+  "user_id": "u_e9535f77d2bb",
+  "phone": "+15126365026",
+  "question": "What was the result of the knicks and hawks game",
+  "answer": "The Knicks absolutely dominated the Hawks in their Game 6 matchup, winning 140-89 to close out the series 4-1 (according to CBS Sports https://www.cbssports.com/nba/news/nba-playoff-winners-and-losers-wolves-advance-76ers-stay-alive-jaylen-brown-and-jamal-murray-scuffle-nba-playoff-winners-and-losers-wolves-advance-76ers-stay-alive). It was one of the most lopsided playoff games ever — the Knicks led 40-15 after the first quarter and 83-36 at halftime, which is a 47-point halftime lead. The Knicks went on to advance and face the winner of the Celtics-Sixers series.\n\nThe series itself was historically one-sided. The Knicks outscored the Hawks by 105 points across the entire series, which is the most lopsided six-game series in NBA history. After losing the first three games competitively, the Knicks just took over and won the final three games by a combined 94 points.\n\nAnything else you want to know?",
+  "qa_similarity": 0.7643,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.45,
+    "accuracy": 0.15
+  }
+}
+
+{
+  "timestamp": 1777838992.223111,
+  "event_type": "digest",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "persona_summary": "User seeks substantive coverage of US political processes and electoral dynamics, evidence-based health and fitness science, and investigative journalism examining crimes and systemic issues—with particular interest in education policy's impact on schools and psychology/mental health research. They prefer analytical, research-driven framing across topics rather than celebrity gossip, entertainment news, or superficial wellness trends, and likely have lower interest in international affairs, sports, or lifestyle content unrelated to health science.",
+  "interests": [
+    "US politics and elections",
+    "health and fitness research",
+    "true crime and investigative journalism",
+    "education policy and school news",
+    "mental health and psychology"
+  ],
+  "articles": [
+    {
+      "article_id": "5ca24c5bcf804832",
+      "title": "Serious mental illness is often connected to homelessness. It doesn’t have to be, Portland professor says - OregonLive.com",
+      "source": "OregonLive",
+      "persona_similarity": 0.1712,
+      "best_interest": "mental health and psychology",
+      "best_interest_similarity": 0.461
+    },
+    {
+      "article_id": "2269b18bd3748c4c",
+      "title": "America 250: Closing the gap in women’s healthcare - WTOP",
+      "source": "WTOP",
+      "persona_similarity": 0.2403,
+      "best_interest": "health and fitness research",
+      "best_interest_similarity": 0.1998
+    },
+    {
+      "article_id": "a5e026138724010c",
+      "title": "The Next Alzheimer’s Breakthrough Will Take More Than Just Science - WIRED",
+      "source": "Wired",
+      "persona_similarity": 0.1731,
+      "best_interest": "health and fitness research",
+      "best_interest_similarity": 0.1637
+    }
+  ]
+}
+
+{
+  "timestamp": 1777839126.514535,
+  "event_type": "response",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "question": "What are the leading causes of homelessness",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.014,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.2
+  }
+}
+
+{
+  "timestamp": 1777839142.0998368,
+  "event_type": "response",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "question": "What are differences in women's and men's healthcare",
+  "answer": "For decades, medical research basically ignored biological differences between women and men—most clinical studies focused on men and just generalized the results to women. Researchers are now recognizing that hormonal cycles, pregnancy, and menopause affect way more than just reproductive health. These transitions ripple through cardiovascular, skeletal, metabolic, and even oral health, but that wasn't being studied or accounted for before.\n\nThe shift is happening because of things like Biden's 2024 executive order on women's health research, which pushed federal agencies to strengthen data collection and expand funding. There's also been a broader correction in how conditions affecting women are studied and treated—like how hormone replacement therapy for menopause is now recognized as safe and effective for many women, reversing years of overcautious guidance. So basically the difference isn't biological per se, it's that medicine was treating women's bodies like they worked the same as men's, and now it's finally starting to study them properly.\n\nAnything else you want to know?",
+  "qa_similarity": 0.5083,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.65
+  }
+}
+
+{
+  "timestamp": 1777839158.293525,
+  "event_type": "response",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "question": "What is the alzheimer's breakthrough",
+  "answer": "There are actually several breakthroughs happening at once. Scientists have found that blocking a protein called PTP1B can restore memory by helping clear out amyloid buildup, and they're now working with a company to combine these PTP1B inhibitors with existing approved drugs to slow Alzheimer's progression (https://www.sciencedaily.com/releases/2026/04/260429102037.htm). Another approach focuses on boosting a protein called Sox9 in astrocytes—those are support cells in your brain—which significantly improves their ability to clear away toxic amyloid plaques (https://www.sciencedaily.com/releases/2026/05/260502013550.htm).\n\nBut here's the thing: according to researcher John Hardy at WIRED Health, the science is only part of the story (https://www.wired.com/story/john-hardy-dementia-wired-health/). We also need better diagnosis tools since only about 60 percent of people diagnosed with dementia actually have Alzheimer's, plus political support and investment in dementia services to get these treatments to patients who need them.\n\nAnything else you want to know?",
+  "qa_similarity": 0.7873,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.3
+  }
+}
+
+{
+  "timestamp": 1777839173.3705568,
+  "event_type": "response",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "question": "Who is John Hardy",
+  "answer": "John Hardy is a pioneering Alzheimer's researcher and chair of the Molecular Biology of Neurological Disease at University College London. He was instrumental in identifying the central role of amyloid—a protein found in the brain and body—in Alzheimer's disease back in the 1990s. He and his colleagues helped establish that deposits of amyloid form plaques around brain cells, which is foundational to how we understand the disease today.\n\nHe spoke at WIRED Health about where Alzheimer's treatment is headed, emphasizing that while scientific breakthroughs are happening, we also need better diagnostic tools and political will to actually get these treatments to patients who need them (https://www.wired.com/story/john-hardy-dementia-wired-health/).\n\nAnything else you want to know?",
+  "qa_similarity": 0.6075,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.85,
+    "accuracy": 0.9
+  }
+}
+
+{
+  "timestamp": 1777839196.870783,
+  "event_type": "response",
+  "user_id": "u_7e5cd12134ba",
+  "phone": "+15126365026",
+  "question": "What are new women's healthcare policies",
+  "answer": "In 2024, President Biden signed an executive order focused on advancing women's health research by directing federal agencies to strengthen data collection, expand funding, and address long-standing gaps in how conditions affecting women are studied and treated (https://wtop.com/250-years-of-america/2026/04/america-250-closing-the-gap-in-womens-healthcare/).\n\nA major shift is happening around hormone replacement therapy for menopause. Health and Human Services Secretary Robert F. Kennedy Jr. announced updated guidance recognizing that for many women, especially those under 60 or within 10 years of menopause onset, HRT is now considered safe and effective for managing symptoms. The new guidance is more precise, accounting for factors like dosage and individual health history rather than applying blanket warnings. There's also growing recognition that hormonal changes affect oral health—declining estrogen increases risks of dry mouth and periodontal disease—and Delta Dental reports women are increasingly seeking menopause-specific dental benefits. On the research side, the National Institutes of Health implemented a 2016 policy requiring studies to include both female and male subjects to ensure findings work for everyone.\n\nAnything else you want to know?",
+  "qa_similarity": 0.5272,
+  "judge": {
+    "human_readability": 0.7,
+    "conciseness": 0.5,
+    "accuracy": 0.3
+  }
+}
+
+{
+  "timestamp": 1777839264.630681,
+  "event_type": "digest",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "persona_summary": "User seeks in-depth coverage of medical breakthroughs and public health policy (epidemiology, healthcare systems, clinical trials), recreational sports news focused on professional golf and tennis tournaments rather than fitness/training content, and practical financial guidance on retirement strategies and investment management. They also value international travel narratives, cultural exploration, and American historical context with political analysis, preferring substantive policy and historical perspectives over celebrity gossip or sports tabloid coverage.",
+  "interests": [
+    "medical research and public health",
+    "golf and tennis",
+    "retirement planning and wealth management",
+    "international travel",
+    "American history and politics"
+  ],
+  "articles": [
+    {
+      "article_id": "21e373a12cd81d8c",
+      "title": "Cigna To Exit Obamacare In 2027, Affecting Coverage For 369,000 - Forbes",
+      "source": "Forbes",
+      "persona_similarity": 0.1183,
+      "best_interest": "retirement planning and wealth management",
+      "best_interest_similarity": 0.158
+    },
+    {
+      "article_id": "2269b18bd3748c4c",
+      "title": "America 250: Closing the gap in women’s healthcare - WTOP",
+      "source": "WTOP",
+      "persona_similarity": 0.2905,
+      "best_interest": "medical research and public health",
+      "best_interest_similarity": 0.3095
+    },
+    {
+      "article_id": "4a3205497709391b",
+      "title": "‘Permit for a terrorist’: Canada opposition asks who cleared ex-IRGC official’s entry - ایران اینترنشنال",
+      "source": "Iranintl.com",
+      "persona_similarity": 0.1313,
+      "best_interest": "international travel",
+      "best_interest_similarity": 0.2411
+    }
+  ]
+}
+
+{
+  "timestamp": 1777839366.4554582,
+  "event_type": "response",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "question": "What is the Canada opposition",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.039,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.3
+  }
+}
+
+{
+  "timestamp": 1777839376.33042,
+  "event_type": "response",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "question": "What is IRGC",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.092,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.9,
+    "accuracy": 0.2
+  }
+}
+
+{
+  "timestamp": 1777839411.106569,
+  "event_type": "response",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "question": "What were some disciminatory women's health policis in the past",
+  "answer": "The article mentions that for much of modern medical history, clinical research disproportionately focused on men, with results then generalized to women (https://wtop.com/250-years-of-america/2026/04/america-250-closing-the-gap-in-womens-healthcare/). Even when women were included in studies, researchers often didn't account for hormonal cycles, pregnancy, or menopause—which we now know ripple across the entire body affecting cardiovascular, skeletal, metabolic, and oral health.\n\nOne specific example was how hormone replacement therapy for menopause was discouraged for years, leaving many women without treatment that could have helped them through a difficult transition. The article notes that millions of women were essentially told to fear the very therapy that could have given them relief and protection for their long-term health.\n\nAnything else you want to know?",
+  "qa_similarity": 0.5336,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.7
+  }
+}
+
+{
+  "timestamp": 1777839430.5412989,
+  "event_type": "response",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "question": "What is Cigna",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.0073,
+  "judge": {
+    "human_readability": 0.8,
+    "conciseness": 0.9,
+    "accuracy": 0.2
+  }
+}
+
+{
+  "timestamp": 1777839453.6005602,
+  "event_type": "response",
+  "user_id": "u_0a068147f2d2",
+  "phone": "+15126365026",
+  "question": "What states is Cigna leaving and why",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.121,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.9,
+    "accuracy": 0.0
+  }
+}
+
+{
+  "timestamp": 1777840074.218401,
+  "event_type": "digest",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "persona_summary": "User seeks substantive coverage of environmental policy and climate science, cultural criticism and music trends, systemic justice issues including civil rights advocacy, Middle East geopolitical analysis, and higher education reform with focus on student debt—preferring policy-oriented and socially-conscious angles over entertainment or lifestyle framing. They likely avoid apolitical consumer content, celebrity gossip, and depoliticized cultural coverage, favoring instead intersectional analysis that connects these domains to broader structural inequality.",
+  "interests": [
+    "climate change and environmental policy",
+    "music and culture",
+    "social justice and civil rights",
+    "middle east politics",
+    "student debt and higher education policy"
+  ],
+  "articles": [
+    {
+      "article_id": "6be6cbde181f0997",
+      "title": "UAE oil exit from OPEC signals focus on domestic priorities - dw.com",
+      "source": "DW (English)",
+      "persona_similarity": 0.2224,
+      "best_interest": "middle east politics",
+      "best_interest_similarity": 0.4283
+    },
+    {
+      "article_id": "c9f03777f95a9009",
+      "title": "Two harsh realities are keeping lower earners stuck while the wealthy pull ahead - Business Insider",
+      "source": "Business Insider",
+      "persona_similarity": 0.2434,
+      "best_interest": "student debt and higher education policy",
+      "best_interest_similarity": 0.2144
+    },
+    {
+      "article_id": "57acb865654fda75",
+      "title": "Everyone loves Ella Langley. Everything else about country music is up for debate. - Yahoo",
+      "source": "Yahoo Entertainment",
+      "persona_similarity": 0.1379,
+      "best_interest": "music and culture",
+      "best_interest_similarity": 0.2998
+    }
+  ]
+}
+
+{
+  "timestamp": 1777840116.3976882,
+  "event_type": "response",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "question": "What is OPEC",
+  "answer": "OPEC is a cartel of oil-producing countries that manages global oil supply to keep prices elevated. According to Newsweek (https://www.newsweek.com/uae-trump-opec-peak-oil-11901746), OPEC's entire model depends on scarcity management—member countries agree to cap their production to maintain higher prices rather than flooding the market. Saudi Arabia has been the driving force behind keeping production constrained to preserve long-term price stability.\n\nThe UAE just quit after 59 years because the strategy no longer makes sense to them. The country was only allowed to produce 3.2 million barrels per day under its OPEC agreement, even though it expanded capacity to 4.8 million bpd. Now that they believe oil demand has peaked, the rational move is to pump as much as possible now before the market shifts away from fossil fuels, rather than stay locked into production limits that benefit Saudi Arabia's vision of indefinite \"OPEC discipline\" (https://www.newsweek.com/uae-trump-opec-peak-oil-11901746).\n\nAnything else you want to know?",
+  "qa_similarity": 0.5433,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.75
+  }
+}
+
+{
+  "timestamp": 1777840178.002746,
+  "event_type": "response",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "question": "Who is Ella Langley",
+  "answer": "Ella Langley is a country music breakout star who's been making serious waves lately. She had a record-breaking No. 1 hit with \"Choosin' Texas\" and just won at the Billboard Women in Music awards, where she gave a heartfelt speech about resilience and fighting for what you believe in. According to Yahoo Entertainment (https://www.yahoo.com/entertainment/music/article/ella-langley-responds-to-beating-taylor-swifts-record-my-heads-spinnin-around-like-an-owl-192423617.html), she actually beat Taylor Swift's record with that song.\n\nWhat's cool about her is that she's got this rare cross-generational appeal in country music right now. Even fellow stars like Lainey Wilson are showing up for her despite being competitors, saying Langley \"kicks the door in\" when she enters a room and stays true to herself no matter what. She comes across as genuine and hungry, not letting success change who she is.\n\nAnything else you want to know?",
+  "qa_similarity": 0.6762,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.5
+  }
+}
+
+{
+  "timestamp": 1777840200.093725,
+  "event_type": "response",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "question": "What is a K-shaped economy",
+  "answer": "A K-shaped economy is when the rich and poor diverge sharply while the middle gets squeezed. Picture the letter K—the top prong goes up (wealthy people thriving) while the bottom prong goes down (lower earners falling behind), and they're moving in opposite directions.\n\nAccording to Business Insider and new Federal Reserve research (https://www.businessinsider.com/k-shaped-economy-federal-reserve-new-york-research-2026-5), the US has been in this pattern since the pandemic ended. Lower earners get hammered by inflation and gas prices, but they don't own enough stocks to benefit from the market's gains like wealthier people do. The top 1% saw their real net worth jump 30% since 2023, while the bottom 20% only grew 13%. Right now it's kind of frozen in place—everyone's spending less and feeling the pinch, but the gap isn't widening further. It's still brutal for lower earners though, since they're stuck while the wealthy keep pulling ahead.\n\nAnything else you want to know?",
+  "qa_similarity": 0.7271,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.6
+  }
+}
+
+{
+  "timestamp": 1777840213.194525,
+  "event_type": "response",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "question": "What is the current discourse on country music",
+  "answer": "Right now there's this huge tension in country music between people who want it to stay traditional and purists who think it's become too pop and rap-influenced. According to Yahoo Entertainment (https://www.yahoo.com/entertainment/music/article/everyone-loves-ella-langley-everything-else-about-country-music-is-up-for-debate-212440425.html), fans at Stagecoach literally can't agree on what counts as country anymore—some people say it's been diluted, with fans saying \"Country is not as country anymore. It's basically pop\" and wanting the old Johnny Cash sound back, while others celebrate crossover artists like Post Malone, Beyoncé, and Hardy as proof the genre is growing.\n\nThe thing is, the way people discover country has totally changed. It used to be radio and the traditional industry gatekeepers, but now female artists especially are breaking through TikTok and social media without needing the old routes to success. That means people stumble into country from completely different directions—some grew up with twangy traditional stuff, others find it fresh for the first time through their feed. The only artist everyone seemed to agree on was Ella Langley, which tells you how rare that consensus actually is right now.\n\nAnything else you want to know?",
+  "qa_similarity": 0.6688,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.75
+  }
+}
+
+{
+  "timestamp": 1777840223.3627489,
+  "event_type": "response",
+  "user_id": "u_5f6932179bd8",
+  "phone": "+15126365026",
+  "question": "What effect does UAE leaving OPEC have on the US",
+  "answer": "I couldn't find that information in the article you're asking about or in any closely related articles. The information isn't available.",
+  "qa_similarity": 0.0583,
+  "judge": {
+    "human_readability": 0.9,
+    "conciseness": 0.95,
+    "accuracy": 0.3
+  }
+}
+
+{
+  "timestamp": 1777840270.244747,
+  "event_type": "digest",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "persona_summary": "User is interested in lifestyle and consumer-focused content spanning residential real estate investment and homeownership practicalities, parenting advice and child psychology, celebrity culture and entertainment gossip, and fashion/beauty product trends and style inspiration—primarily from accessible, trend-focused and personal-interest angles rather than technical or policy-heavy reporting. They likely have low interest in hard news, politics, business-to-business content, or technical deep-dives unrelated to consumer applications.",
+  "interests": [
+    "eal estate market and home buying",
+    "family life and child development",
+    "celebrity news and entertainment",
+    "fashion and beauty trends",
+    "social media"
+  ],
+  "articles": [
+    {
+      "article_id": "0dc1aa53be0cead6",
+      "title": "Chanel Debuted A New \"Shoe,\" And After Seeing It, You'll Be Happy, For Once, That You're Poor - BuzzFeed",
+      "source": "Buzzfeed",
+      "persona_similarity": 0.2505,
+      "best_interest": "celebrity news and entertainment",
+      "best_interest_similarity": 0.3954
+    },
+    {
+      "article_id": "58255ba37d813ea1",
+      "title": "50 Cent Sued by Former Staffer Who Claims She Was Fired for Refusing to Help Him Hide Assets and File a Fake Police Report - Yahoo",
+      "source": "Wealthofgeeks.com",
+      "persona_similarity": 0.1443,
+      "best_interest": "celebrity news and entertainment",
+      "best_interest_similarity": 0.2693
+    },
+    {
+      "article_id": "babb2934ebf61282",
+      "title": "NASCAR legend Greg Biffle’s estate facing $30 million in wrongful death lawsuits over deadly plane crash - New York Post",
+      "source": "New York Post",
+      "persona_similarity": 0.063,
+      "best_interest": "celebrity news and entertainment",
+      "best_interest_similarity": 0.1308
+    }
+  ]
+}
+
+{
+  "timestamp": 1777840445.379019,
+  "event_type": "response",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "question": "What are the reactions to the new Chanel shoe",
+  "answer": "People online have basically roasted these things nonstop, and honestly it's pretty funny. According to BuzzFeed (https://www.buzzfeed.com/alanavalko/chanel-toes-out-shoe), the reactions range from \"It's solving a problem no one had and creating three new ones, but aside from that I hate it\" to \"Can't wait to wear these on the NYC subway so that I can contract Hepatitis.\" There's also gems like \"This is next level shrinkflation\" and someone comparing them to plantar warts. The general vibe is that people think they're absolutely ridiculous—though some are wondering if it's just another viral fashion stunt or if they might actually show up at the Met Gala.\n\nAnything else you want to know?",
+  "qa_similarity": 0.6364,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.3
+  }
+}
+
+{
+  "timestamp": 1777840460.264831,
+  "event_type": "response",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "question": "Whare were Greg Biffle's accomplishments",
+  "answer": "Greg was a seriously accomplished driver. According to ESPN (https://www.espn.com/racing/nascar/cup/story/_/id/48645549/two-wrongful-death-lawsuits-filed-deadly-biffle-plane-crash), he won more than 50 races across NASCAR's three circuits, including 19 at the Cup Series level, plus he won the Trucks Series championship in 2000 and the Xfinity Series title in 2002. He was also named one of NASCAR's 75 greatest drivers.\n\nBeyond racing, he was known for his humanitarian work too. In 2024 he was honored for his efforts after Hurricane Helene, even using his personal helicopter to deliver aid to flooded areas in western North Carolina. According to Rep. Richard Hudson, people \"will remember him for his service to others as much as for his fearlessness on the track.\"\n\nAnything else you want to know?",
+  "qa_similarity": 0.4456,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.15
+  }
+}
+
+{
+  "timestamp": 1777840477.105651,
+  "event_type": "response",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "question": "What caused the plane crash",
+  "answer": "A preliminary report showed the plane's altimeter was giving incorrect readings, and pilot Dennis Dutton handed control to his son Jack shortly before the crash according to ESPN (https://www.espn.com/racing/nascar/cup/story/_/id/48645549/two-wrongful-death-lawsuits-filed-deadly-biffle-plane-crash). The problem is that neither Jack Dutton nor Biffle had the proper endorsement on their pilot's licenses to serve as copilot on that aircraft. An aviation safety consultant who used to investigate crashes for the NTSB and FAA said the lack of an experienced copilot may have been a key factor. The NTSB is still investigating and hasn't released its final report yet, but the lawsuits also claim that inadequate maintenance and upkeep of the plane contributed to the crash.\n\nAnything else you want to know?",
+  "qa_similarity": 0.4708,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.7,
+    "accuracy": 0.4
+  }
+}
+
+{
+  "timestamp": 1777840488.790752,
+  "event_type": "response",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "question": "What did 50 Cent want to hide",
+  "answer": "According to the lawsuit filed by his former staffer (https://wealthofgeeks.com/50-cent-sued-by-former-staffer-who-claims-she-was-fired-for-refusing-to-help-him-hide-assets-and-file-a-fake-police-report/), 50 Cent allegedly wanted to hide assets from creditors during a period when he was dealing with bankruptcy and financial pressures. The complaint claims he asked her to put assets in her own name to shield them from creditors, which she refused to do.\n\nThe lawsuit also alleges that he then pressured her to file a false police report accusing his driver and bodyguard of stealing his car and around $600,000 in cash, which she also refused. His team denies all of this and characterizes her as a disgruntled former employee who was fired for cause over five years ago.\n\nAnything else you want to know?",
+  "qa_similarity": 0.496,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.85
+  }
+}
+
+{
+  "timestamp": 1777840508.654216,
+  "event_type": "response",
+  "user_id": "u_dde8a49c7575",
+  "phone": "+15126365026",
+  "question": "What was the fake police report about",
+  "answer": "The fake police report was supposed to claim that someone on his own payroll—his driver and bodyguard—had stolen his car and around $600,000 in cash, according to Wealthofgeeks (https://wealthofgeeks.com/50-cent-sued-by-former-staffer-who-claims-she-was-fired-for-refusing-to-help-him-hide-assets-and-file-a-fake-police-report/). He allegedly wanted his former staffer to go to the authorities and file it, but she refused because filing a false police report is a crime with serious consequences.\n\nAnything else you want to know?",
+  "qa_similarity": 0.7453,
+  "judge": {
+    "human_readability": 0.85,
+    "conciseness": 0.75,
+    "accuracy": 0.9
+  }
+}
+

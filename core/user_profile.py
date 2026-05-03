@@ -29,6 +29,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     user_id            TEXT PRIMARY KEY,
     phone              TEXT UNIQUE NOT NULL,
+    name               TEXT NOT NULL DEFAULT '',
     interests_json     TEXT NOT NULL DEFAULT '[]',
     persona_summary    TEXT NOT NULL DEFAULT '',
     onboarding_state   TEXT NOT NULL DEFAULT 'NEEDS_ONBOARDING',
@@ -76,6 +77,7 @@ FREQUENCY_CHOICES: dict[str, str] = {
 class User:
     user_id: str
     phone: str
+    name: str = ""
     interests: List[str] = field(default_factory=list)
     persona_summary: str = ""
     onboarding_state: str = "NEEDS_ONBOARDING"
@@ -115,6 +117,7 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("custom_push_minute",   "ALTER TABLE users ADD COLUMN custom_push_minute INTEGER"),
         ("custom_push_hour_2",   "ALTER TABLE users ADD COLUMN custom_push_hour_2 INTEGER"),
         ("custom_push_minute_2", "ALTER TABLE users ADD COLUMN custom_push_minute_2 INTEGER"),
+        ("name",                 "ALTER TABLE users ADD COLUMN name TEXT NOT NULL DEFAULT ''"),
     ):
         if col not in existing:
             conn.execute(ddl)
@@ -124,6 +127,7 @@ def _row_to_user(row: sqlite3.Row, history: List[dict]) -> User:
     return User(
         user_id=row["user_id"],
         phone=row["phone"],
+        name=row["name"] if "name" in row.keys() else "",
         interests=json.loads(row["interests_json"]),
         persona_summary=row["persona_summary"],
         onboarding_state=row["onboarding_state"],
@@ -185,6 +189,14 @@ def list_users() -> List[User]:
     with _connect() as conn:
         rows = conn.execute("SELECT * FROM users").fetchall()
         return [_row_to_user(r, _fetch_history(conn, r["user_id"])) for r in rows]
+
+
+def set_name(user_id: str, name: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE users SET name = ?, updated_at = ? WHERE user_id = ?",
+            ((name or "").strip(), time.time(), user_id),
+        )
 
 
 def set_interests(user_id: str, interests: Iterable[str]) -> None:

@@ -26,6 +26,7 @@ from groq import Groq
 from groq import RateLimitError as GroqRateLimitError
 
 from config import (
+    AGENT_PROVIDER,
     ANTHROPIC_API_KEY,
     ANTHROPIC_JUDGE_MODEL,
     ANTHROPIC_MODEL,
@@ -48,16 +49,42 @@ def _key_real(key: str) -> bool:
     return True
 
 
-def llm_configured() -> bool:
-    return _key_real(ANTHROPIC_API_KEY) or _key_real(GROQ_API_KEY)
+_VALID_AGENT_MODES = {"auto", "anthropic", "groq", "tfidf"}
+_warned_modes: set[str] = set()
 
 
-def active_provider() -> Optional[Provider]:
+def _resolved_provider() -> Optional[Provider]:
+    mode = AGENT_PROVIDER if AGENT_PROVIDER in _VALID_AGENT_MODES else "auto"
+    if mode == "tfidf":
+        return None
+    if mode == "anthropic":
+        if _key_real(ANTHROPIC_API_KEY):
+            return "anthropic"
+        if "anthropic" not in _warned_modes:
+            log.warning("AGENT_PROVIDER=anthropic but no ANTHROPIC_API_KEY set; falling back to TF-IDF")
+            _warned_modes.add("anthropic")
+        return None
+    if mode == "groq":
+        if _key_real(GROQ_API_KEY):
+            return "groq"
+        if "groq" not in _warned_modes:
+            log.warning("AGENT_PROVIDER=groq but no GROQ_API_KEY set; falling back to TF-IDF")
+            _warned_modes.add("groq")
+        return None
+    # auto
     if _key_real(ANTHROPIC_API_KEY):
         return "anthropic"
     if _key_real(GROQ_API_KEY):
         return "groq"
     return None
+
+
+def llm_configured() -> bool:
+    return _resolved_provider() is not None
+
+
+def active_provider() -> Optional[Provider]:
+    return _resolved_provider()
 
 
 _ANTHROPIC_MODELS = {"chat": ANTHROPIC_MODEL, "judge": ANTHROPIC_JUDGE_MODEL}

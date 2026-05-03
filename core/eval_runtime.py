@@ -20,9 +20,9 @@ from typing import List, Optional
 
 import numpy as np
 
-from config import EVAL_LOG_PATH, EVAL_MODE
+from config import ANTHROPIC_API_KEY, ANTHROPIC_JUDGE_MODEL, EVAL_LOG_PATH, EVAL_MODE
 from core.article_fetcher import Article
-from core.llm import complete, llm_configured
+from core.llm import _key_real
 from core.rag_engine import _get_embedder
 from core.user_profile import User
 
@@ -150,12 +150,25 @@ Respond with ONLY a JSON object, no prose:
 _NULL_SCORES = {"human_readability": None, "conciseness": None, "accuracy": None}
 
 
+def judge_available() -> bool:
+    """LLM-as-Judge only runs when an Anthropic API key is configured.
+    Groq is intentionally not used as a judge."""
+    return _key_real(ANTHROPIC_API_KEY)
+
+
 def _judge(question: str, answer: str) -> dict:
-    if not llm_configured():
+    if not judge_available():
         return dict(_NULL_SCORES)
     try:
+        from anthropic import Anthropic
+        client = Anthropic(api_key=ANTHROPIC_API_KEY)
         prompt = _JUDGE_PROMPT.format(question=question, answer=answer)
-        raw = complete(prompt, max_tokens=200, purpose="judge").strip()
+        msg = client.messages.create(
+            model=ANTHROPIC_JUDGE_MODEL,
+            max_tokens=200,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = "".join(getattr(b, "text", "") for b in msg.content).strip()
         return _parse_judge_json(raw)
     except Exception:
         log.exception("judge call failed")

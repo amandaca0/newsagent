@@ -20,7 +20,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from config import CHROMA_PATH, EMBEDDING_MODEL
-from core.article_fetcher import Article, get_cached_article
+from core.article_fetcher import Article, enrich_with_full_text, get_cached_article
 from core.conv_log import log_event
 from core.llm import active_model, complete
 from core.user_profile import User, llm_configured
@@ -103,9 +103,16 @@ def _chunk_paragraphs(text: str) -> List[str]:
 
 
 def index_articles(user_id: str, articles: List[Article]) -> int:
-    """Embed and store paragraph chunks for this user's recent articles."""
+    """Embed and store paragraph chunks for this user's recent articles.
+
+    Articles whose `content` looks truncated (NewsAPI free-tier ~200 char
+    cap) are scraped from the publisher URL first, so RAG retrieval can
+    reach more than the description blurb. Scraped bodies are persisted
+    back to the article cache so this only runs once per article.
+    """
     if not articles:
         return 0
+    enrich_with_full_text(articles)
     coll = _collection(user_id)
     embedder = _get_embedder()
 

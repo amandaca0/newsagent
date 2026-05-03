@@ -90,7 +90,7 @@
 
     const MIN_TOPICS = 5;
 
-    const STEP_LABELS = ["Phone", "Topics", "Schedule", "Review"];
+    const STEP_LABELS = ["You", "Topics", "Schedule", "Review"];
 
     function defaultTimes() {
       // One slot per frequency, pre-filled to that option's default. Stored in
@@ -103,7 +103,7 @@
     function App() {
       const [step, setStep] = useState(1);
       const [form, setForm] = useState({
-        phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes(),
+        name: '', phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes(),
       });
       const [status, setStatus] = useState({ loading: false, error: null, user: null });
 
@@ -114,6 +114,7 @@
       const submit = async () => {
         setStatus({ loading: true, error: null, user: null });
         const payload = {
+          name: form.name,
           phone: form.phone,
           topics: form.topics,
           frequency: form.frequency,
@@ -157,7 +158,7 @@
       if (status.user) {
         return <Success user={status.user} frequencyLabel={status.user.frequency_label} onRestart={() => {
           setStep(1);
-          setForm({ phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes() });
+          setForm({ name: '', phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes() });
           setStatus({ loading: false, error: null, user: null });
         }} />;
       }
@@ -229,15 +230,27 @@
 
     function Step1({ form, update, onNext }) {
       const digits = form.phone.replace(/\D/g, '');
-      const valid = digits.length >= 10 && digits.length <= 15;
+      const phoneValid = digits.length >= 10 && digits.length <= 15;
+      const nameValid = form.name.trim().length > 0;
+      const valid = phoneValid && nameValid;
       return (
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">What's your phone number?</h1>
-          <p className="mt-2 text-slate-600">We'll text your digest here. Nothing else.</p>
+          <h1 className="text-3xl font-bold text-slate-900">Let's get to know you.</h1>
+          <p className="mt-2 text-slate-600">Just a name and a number — we'll text your digest there.</p>
+          <label className="block mt-8 text-sm font-semibold text-slate-700 mb-2">Your name</label>
+          <input
+            type="text"
+            autoFocus
+            className="w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
+            placeholder="Alex"
+            value={form.name}
+            onChange={e => update({ name: e.target.value })}
+            onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
+          />
+          <label className="block mt-5 text-sm font-semibold text-slate-700 mb-2">Phone number</label>
           <input
             type="tel"
-            autoFocus
-            className="mt-8 w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
+            className="w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
             placeholder="+1 (555) 123-4567"
             value={form.phone}
             onChange={e => update({ phone: e.target.value })}
@@ -411,6 +424,7 @@
           <h1 className="text-3xl font-bold text-slate-900">Looks good?</h1>
           <p className="mt-2 text-slate-600">Double-check, then we'll set you up.</p>
           <div className="mt-8 space-y-5 bg-slate-50 rounded-xl p-6">
+            <Row label="Name" value={form.name} />
             <Row label="Phone number" value={form.phone} />
             <Row label="Topics" value={
               <div className="flex flex-wrap gap-1.5">
@@ -472,7 +486,7 @@
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">You're all set!</h1>
+            <h1 className="text-3xl font-bold text-slate-900">{user.name ? `You're all set, ${user.name}!` : "You're all set!"}</h1>
             <p className="mt-2 text-slate-600">Your first digest arrives at the next scheduled time.</p>
             <dl className="mt-8 text-left space-y-4 bg-slate-50 rounded-xl p-6">
               <Row label="Phone" value={user.phone} />

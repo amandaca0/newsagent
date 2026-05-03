@@ -11,3 +11,4 @@ data/logs/
 .ipynb_checkpoints/
 .DS_Store
 .env
+data/eval_metrics_fail.jsonl
