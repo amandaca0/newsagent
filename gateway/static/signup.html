@@ -8,28 +8,39 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
   <style>
+    @import url('https://api.fontshare.com/v2/css?f[]=bespoke-serif@400,500,700&f[]=satoshi@400,500,700&display=swap');
+
+    body {
+      font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #fcfaf7;
+      color: #1a1a1a;
+    }
+    .serif { font-family: 'Bespoke Serif', Georgia, serif; }
+
     @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(8px); }
+      from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .step-enter { animation: fadeSlide 220ms ease-out; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .step-enter { animation: fadeSlide 400ms cubic-bezier(0.4, 0, 0.2, 1); }
+
+    input, textarea { background: transparent !important; }
   </style>
 </head>
-<body class="bg-slate-50">
+<body>
   <div id="root"></div>
 
   <script type="text/babel" data-type="module">
     const { useState, useMemo } = React;
 
     const FREQ_OPTIONS = [
-      { value: 'every_4h',     label: 'Every 4 hours',     icon: '⚡', kind: 'startTime', defaults: { h: 8,  m: 0 } },
-      { value: 'every_8h',     label: 'Every 8 hours',     icon: '🔄', kind: 'startTime', defaults: { h: 0,  m: 0 } },
-      { value: 'morning_9am',  label: 'Morning briefing',  icon: '☕', kind: 'oneTime',   defaults: { h: 9,  m: 0 } },
-      { value: 'evening_6pm',  label: 'Evening wrap-up',   icon: '🌙', kind: 'oneTime',   defaults: { h: 18, m: 0 } },
-      { value: 'twice_daily',  label: 'Morning + evening', icon: '🌓', kind: 'twoTimes',  defaults: { am: { h: 9, m: 0 }, pm: { h: 18, m: 0 } } },
-      { value: 'custom_daily', label: 'Custom time',       icon: '⏰', kind: 'oneTime',   defaults: { h: 9,  m: 0 } },
+      { value: 'every_4h',     label: 'Every 4 hours',     icon: 'lucide:zap',        kind: 'startTime', defaults: { h: 8,  m: 0 } },
+      { value: 'every_8h',     label: 'Every 8 hours',     icon: 'lucide:refresh-cw', kind: 'startTime', defaults: { h: 0,  m: 0 } },
+      { value: 'morning_9am',  label: 'Morning briefing',  icon: 'lucide:coffee',     kind: 'oneTime',   defaults: { h: 9,  m: 0 } },
+      { value: 'evening_6pm',  label: 'Evening wrap-up',   icon: 'lucide:moon',       kind: 'oneTime',   defaults: { h: 18, m: 0 } },
+      { value: 'twice_daily',  label: 'Morning + evening', icon: 'lucide:sun-medium', kind: 'twoTimes',  defaults: { am: { h: 9, m: 0 }, pm: { h: 18, m: 0 } } },
+      { value: 'custom_daily', label: 'Custom time',       icon: 'lucide:clock',      kind: 'oneTime',   defaults: { h: 9,  m: 0 } },
     ];
 
     const FREQ_BY_VALUE = Object.fromEntries(FREQ_OPTIONS.map(o => [o.value, o]));
@@ -37,7 +48,6 @@
     function pad(n) { return String(n).padStart(2, '0'); }
     function hmToHHMM({ h, m }) { return `${pad(h)}:${pad(m)}`; }
 
-    // Convert a local "HH:MM" string to the corresponding UTC {hour, minute}.
     function localTimeToUtc(hhmm) {
       if (!hhmm) return null;
       const [h, m] = hhmm.split(':').map(Number);
@@ -47,30 +57,14 @@
       return { hour: d.getUTCHours(), minute: d.getUTCMinutes() };
     }
 
-    // Convert UTC hour/minute to local "HH:MM".
-    function utcToLocalHHMM(hour, minute) {
-      if (hour == null || minute == null) return null;
-      const d = new Date();
-      d.setUTCHours(hour, minute, 0, 0);
-      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
-
     function tzLabel() {
-      try {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } catch { return 'local'; }
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+      catch { return 'local'; }
     }
 
-    // Generate a human-friendly local-time detail string for an option, given
-    // the current per-option time(s) the user has picked.
     function describeOption(opt, t) {
-      if (opt.kind === 'oneTime') {
-        return `Once a day at ${hmToHHMM(t)} (your time)`;
-      }
-      if (opt.kind === 'twoTimes') {
-        return `At ${hmToHHMM(t.am)} and ${hmToHHMM(t.pm)} (your time)`;
-      }
-      // startTime: 4 fires (every_4h) or 3 fires (every_8h), N hours apart, wrap on 24h
+      if (opt.kind === 'oneTime') return `Once a day at ${hmToHHMM(t)} (your time)`;
+      if (opt.kind === 'twoTimes') return `At ${hmToHHMM(t.am)} and ${hmToHHMM(t.pm)} (your time)`;
       const stepHours = opt.value === 'every_4h' ? 4 : 8;
       const fires = opt.value === 'every_4h' ? 4 : 3;
       const startMin = t.h * 60 + t.m;
@@ -89,12 +83,9 @@
     ];
 
     const MIN_TOPICS = 5;
-
-    const STEP_LABELS = ["You", "Topics", "Schedule", "Review"];
+    const STEP_LABELS = ["Identity", "Interests", "Cadence", "Finalize"];
 
     function defaultTimes() {
-      // One slot per frequency, pre-filled to that option's default. Stored in
-      // local time so the picker works directly; converted to UTC at submit.
       const o = {};
       for (const opt of FREQ_OPTIONS) o[opt.value] = opt.defaults;
       return o;
@@ -102,9 +93,7 @@
 
     function App() {
       const [step, setStep] = useState(1);
-      const [form, setForm] = useState({
-        name: '', phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes(),
-      });
+      const [form, setForm] = useState({ name: '', phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes() });
       const [status, setStatus] = useState({ loading: false, error: null, user: null });
 
       const update = (patch) => setForm(f => ({ ...f, ...patch }));
@@ -113,40 +102,22 @@
 
       const submit = async () => {
         setStatus({ loading: true, error: null, user: null });
-        const payload = {
-          name: form.name,
-          phone: form.phone,
-          topics: form.topics,
-          frequency: form.frequency,
-        };
+        const payload = { name: form.name, phone: form.phone, topics: form.topics, frequency: form.frequency };
         const opt = FREQ_BY_VALUE[form.frequency];
         const t = form.times[form.frequency];
         if (opt.kind === 'twoTimes') {
           const u1 = localTimeToUtc(hmToHHMM(t.am));
           const u2 = localTimeToUtc(hmToHHMM(t.pm));
-          if (!u1 || !u2) {
-            setStatus({ loading: false, error: "Pick valid times.", user: null });
-            return;
-          }
-          payload.custom_hour = u1.hour;
-          payload.custom_minute = u1.minute;
-          payload.custom_hour_2 = u2.hour;
-          payload.custom_minute_2 = u2.minute;
+          if (!u1 || !u2) { setStatus({ loading: false, error: "Pick valid times.", user: null }); return; }
+          payload.custom_hour = u1.hour; payload.custom_minute = u1.minute;
+          payload.custom_hour_2 = u2.hour; payload.custom_minute_2 = u2.minute;
         } else {
           const u = localTimeToUtc(hmToHHMM(t));
-          if (!u) {
-            setStatus({ loading: false, error: "Pick a valid time.", user: null });
-            return;
-          }
-          payload.custom_hour = u.hour;
-          payload.custom_minute = u.minute;
+          if (!u) { setStatus({ loading: false, error: "Pick a valid time.", user: null }); return; }
+          payload.custom_hour = u.hour; payload.custom_minute = u.minute;
         }
         try {
-          const resp = await fetch('/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
+          const resp = await fetch('/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || 'Something went wrong.');
           setStatus({ loading: false, error: null, user: data.user });
@@ -155,75 +126,70 @@
         }
       };
 
-      if (status.user) {
-        return <Success user={status.user} frequencyLabel={status.user.frequency_label} onRestart={() => {
+      if (status.user) return (
+        <Success user={status.user} frequencyLabel={status.user.frequency_label} onRestart={() => {
           setStep(1);
           setForm({ name: '', phone: '', topics: '', frequency: 'morning_9am', times: defaultTimes() });
           setStatus({ loading: false, error: null, user: null });
-        }} />;
-      }
+        }} />
+      );
 
       return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl">
-            <div className="text-center mb-6">
-              <h2 className="text-white/90 text-sm font-semibold tracking-widest uppercase">NewsAgent</h2>
-              <p className="text-white/70 text-sm mt-1">Your personalized news digest, delivered.</p>
+        <div className="min-h-screen flex flex-col bg-[#fcfaf7]">
+          <header className="border-b border-zinc-200 py-5 px-6 md:px-12 flex justify-between items-center sticky top-0 z-50 bg-[#fcfaf7]">
+            <div className="flex items-center gap-2">
+              <iconify-icon icon="lucide:newspaper" class="text-xl"></iconify-icon>
+              <span className="serif font-bold text-lg tracking-tight">NEWSAGENT</span>
             </div>
-            <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-10">
-              <ProgressBar step={step} labels={STEP_LABELS} />
-              {status.error && (
-                <div className="mt-6 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                  {status.error}
-                </div>
-              )}
-              <div key={step} className="mt-8 step-enter">
+            <a href="/users" className="text-xs font-medium tracking-widest uppercase hover:underline text-zinc-500">Manage Users</a>
+          </header>
+
+          <main className="flex-1 flex items-start justify-center p-6 md:p-12">
+            <div className="w-full max-w-4xl grid md:grid-cols-[180px_1px_1fr] gap-10 items-start pt-8">
+
+              {/* Sidebar step nav — desktop only */}
+              <aside className="hidden md:flex flex-col gap-6 sticky top-24">
+                <div className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400 mb-2">Registration</div>
+                {STEP_LABELS.map((label, i) => {
+                  const idx = i + 1;
+                  const done = idx < step;
+                  const active = idx === step;
+                  return (
+                    <div key={label} className="flex items-center gap-3">
+                      <div className={`w-7 h-7 flex items-center justify-center border text-xs font-bold flex-shrink-0 transition-all ${done || active ? 'border-zinc-900 bg-zinc-900 text-white' : 'border-zinc-300 text-zinc-400'}`}>
+                        {done
+                          ? <iconify-icon icon="lucide:check" style={{fontSize:'12px'}}></iconify-icon>
+                          : `0${idx}`}
+                      </div>
+                      <span className={`text-sm font-medium ${active ? 'text-zinc-900' : 'text-zinc-400'}`}>{label}</span>
+                    </div>
+                  );
+                })}
+              </aside>
+
+              <div className="hidden md:block w-px bg-zinc-200 self-stretch"></div>
+
+              {/* Mobile step indicator */}
+              <div className="md:hidden flex items-center gap-2 mb-4 col-span-full">
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">Step {step} of {STEP_LABELS.length}</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-900">— {STEP_LABELS[step - 1]}</span>
+              </div>
+
+              <div key={step} className="step-enter min-w-0">
+                {status.error && (
+                  <div className="mb-8 p-4 bg-zinc-900 text-zinc-100 text-sm">{status.error}</div>
+                )}
                 {step === 1 && <Step1 form={form} update={update} onNext={next} />}
                 {step === 2 && <Step2 form={form} update={update} onNext={next} onBack={back} />}
                 {step === 3 && <Step3 form={form} update={update} onNext={next} onBack={back} />}
                 {step === 4 && <Step4 form={form} onBack={back} onSubmit={submit} loading={status.loading} />}
               </div>
             </div>
-            <p className="text-center text-white/60 text-xs mt-6">
-              Step {step} of {STEP_LABELS.length} · <a href="/users" className="underline hover:text-white">Manage users</a>
-            </p>
-          </div>
-        </div>
-      );
-    }
+          </main>
 
-    function ProgressBar({ step, labels }) {
-      return (
-        <div className="flex items-center">
-          {labels.map((label, i) => {
-            const idx = i + 1;
-            const done = idx < step;
-            const active = idx === step;
-            return (
-              <React.Fragment key={label}>
-                <div className="flex flex-col items-center flex-shrink-0">
-                  <div className={[
-                    "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition",
-                    done   ? "bg-green-500 text-white" :
-                    active ? "bg-indigo-600 text-white ring-4 ring-indigo-100" :
-                             "bg-slate-100 text-slate-400"
-                  ].join(' ')}>
-                    {done ? '✓' : idx}
-                  </div>
-                  <span className={[
-                    "mt-2 text-xs",
-                    active ? "text-slate-900 font-semibold" : "text-slate-500"
-                  ].join(' ')}>{label}</span>
-                </div>
-                {idx < labels.length && (
-                  <div className={[
-                    "flex-1 h-1 mx-2 rounded-full transition-colors",
-                    done ? "bg-green-500" : "bg-slate-200"
-                  ].join(' ')} style={{marginBottom: 22}} />
-                )}
-              </React.Fragment>
-            );
-          })}
+          <footer className="border-t border-zinc-200 py-6 px-6 text-[10px] tracking-[0.2em] uppercase text-zinc-400 text-center">
+            NewsAgent &mdash; Privacy-First Intelligence
+          </footer>
         </div>
       );
     }
@@ -234,129 +200,112 @@
       const nameValid = form.name.trim().length > 0;
       const valid = phoneValid && nameValid;
       return (
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Let's get to know you.</h1>
-          <p className="mt-2 text-slate-600">Just a name and a number — we'll text your digest there.</p>
-          <label className="block mt-8 text-sm font-semibold text-slate-700 mb-2">Your name</label>
-          <input
-            type="text"
-            autoFocus
-            className="w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
-            placeholder="Alex"
-            value={form.name}
-            onChange={e => update({ name: e.target.value })}
-            onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
-          />
-          <label className="block mt-5 text-sm font-semibold text-slate-700 mb-2">Phone number</label>
-          <input
-            type="tel"
-            className="w-full px-5 py-4 text-xl border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition"
-            placeholder="+1 (555) 123-4567"
-            value={form.phone}
-            onChange={e => update({ phone: e.target.value })}
-            onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
-          />
-          <p className="mt-3 text-sm text-slate-500">
-            US numbers — country code +1 will be added automatically.
-          </p>
-          <NavRow onNext={onNext} nextDisabled={!valid} />
+        <div className="max-w-lg">
+          <h1 className="serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-3">Your customizable scoop of news.</h1>
+          <p className="text-zinc-500 mb-12 text-lg">Your personalized briefing, delivered via iMessage. Let's start with your credentials.</p>
+
+          <div className="space-y-10">
+            <div className="border-b border-zinc-300 focus-within:border-zinc-900 transition-colors pb-2">
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400 mb-2">Subscriber Name</label>
+              <input type="text" autoFocus placeholder="Alex" value={form.name}
+                onChange={e => update({ name: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
+                className="w-full py-1 text-xl serif focus:outline-none" />
+            </div>
+            <div className="border-b border-zinc-300 focus-within:border-zinc-900 transition-colors pb-2">
+              <label className="block text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400 mb-2">Phone Number</label>
+              <input type="tel" placeholder="+1 (555) 123-4567" value={form.phone}
+                onChange={e => update({ phone: e.target.value })}
+                onKeyDown={e => { if (e.key === 'Enter' && valid) onNext(); }}
+                className="w-full py-1 text-xl serif focus:outline-none" />
+              <p className="mt-2 text-xs text-zinc-400">US numbers — +1 added automatically.</p>
+            </div>
+          </div>
+
+          <div className="mt-14">
+            <button onClick={onNext} disabled={!valid}
+              className="px-10 py-4 bg-zinc-900 text-white text-sm font-bold tracking-widest uppercase hover:bg-zinc-700 transition-colors disabled:opacity-20 flex items-center gap-2">
+              Continue <iconify-icon icon="lucide:arrow-right"></iconify-icon>
+            </button>
+          </div>
         </div>
       );
     }
 
     function Step2({ form, update, onNext, onBack }) {
       const topicList = form.topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean);
-      const addedSet = useMemo(
-        () => new Set(topicList.map(t => t.toLowerCase())),
-        [form.topics]
-      );
+      const addedSet = useMemo(() => new Set(topicList.map(t => t.toLowerCase())), [form.topics]);
       const addChip = (s) => {
         const cur = form.topics.trim();
         const sep = cur && !cur.endsWith(',') ? ', ' : '';
         update({ topics: cur + sep + s });
       };
-      const count = topicList.length;
-      const valid = count >= MIN_TOPICS;
+      const valid = topicList.length >= MIN_TOPICS;
       return (
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">What's on your radar?</h1>
-          <p className="mt-2 text-slate-600">
-            List at least {MIN_TOPICS} specific topics, comma-separated. <span className="font-medium">"EU AI Act"</span> beats <span className="font-medium">"AI"</span>.
+        <div className="max-w-lg">
+          <h1 className="serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-3">Define your sphere.</h1>
+          <p className="text-zinc-500 mb-12 text-lg">
+            List at least {MIN_TOPICS} topics, comma-separated. <span className="font-semibold text-zinc-700">"EU AI Act"</span> beats <span className="font-semibold text-zinc-700">"AI"</span>.
           </p>
+
           <textarea autoFocus rows={4}
-            className="mt-8 w-full px-5 py-4 text-base border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-none transition resize-none align-top"
+            className="w-full p-4 border border-zinc-300 focus:border-zinc-900 focus:outline-none text-base serif resize-none"
             placeholder="EU AI regulation, NBA trades, climate finance..."
             value={form.topics}
-            onChange={e => update({ topics: e.target.value })}></textarea>
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Suggestions</p>
+            onChange={e => update({ topics: e.target.value })} />
+
+          <div className="mt-6">
+            <div className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400 mb-3">Suggestions</div>
             <div className="flex flex-wrap gap-2">
               {TOPIC_SUGGESTIONS.map(s => {
                 const added = addedSet.has(s.toLowerCase());
                 return (
-                  <button
-                    key={s}
-                    type="button"
-                    disabled={added}
-                    onClick={() => !added && addChip(s)}
-                    className={[
-                      "px-3 py-1.5 text-sm rounded-full transition",
-                      added
-                        ? "bg-slate-100 text-slate-400 line-through opacity-50 cursor-not-allowed"
-                        : "bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-700",
-                    ].join(' ')}
-                  >{added ? '✓ ' : '+ '}{s}</button>
+                  <button key={s} type="button" disabled={added} onClick={() => !added && addChip(s)}
+                    className={`px-3 py-1 text-xs border font-medium transition-colors ${added ? 'border-zinc-200 text-zinc-300 line-through cursor-not-allowed' : 'border-zinc-300 text-zinc-600 hover:border-zinc-900 hover:text-zinc-900'}`}>
+                    {added ? '✓ ' : '+ '}{s}
+                  </button>
                 );
               })}
             </div>
           </div>
-          <p className={["mt-4 text-sm", valid ? "text-slate-500" : "text-amber-600"].join(' ')}>
-            {count} of {MIN_TOPICS} {MIN_TOPICS === 1 ? 'topic' : 'topics'} minimum
+
+          <p className={`mt-4 text-xs font-bold tracking-widest uppercase ${valid ? 'text-zinc-400' : 'text-amber-600'}`}>
+            {topicList.length} / {MIN_TOPICS} topics minimum
           </p>
-          <NavRow onBack={onBack} onNext={onNext} nextDisabled={!valid} />
+
+          <NavRow onBack={onBack} onNext={onNext} nextDisabled={!valid} nextLabel="Set Schedule" />
         </div>
       );
     }
 
     function SchedulePicker({ opt, value, onChange }) {
-      // value shape mirrors opt.defaults; this component renders 1 or 2 time
-      // inputs depending on opt.kind.
       if (opt.kind === 'twoTimes') {
         return (
-          <div className="ml-16 -mt-1 mb-3 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3">
+          <div className="ml-10 mt-2 mb-3 p-4 border border-zinc-200 bg-zinc-50/50 space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Morning time</label>
+              <label className="block text-[10px] uppercase tracking-[0.15em] font-black text-zinc-400 mb-2">Morning time</label>
               <input type="time" value={hmToHHMM(value.am)}
-                onChange={e => {
-                  const [h, m] = e.target.value.split(':').map(Number);
-                  if (!isNaN(h) && !isNaN(m)) onChange({ ...value, am: { h, m } });
-                }}
-                className="px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none text-lg" />
+                onChange={e => { const [h,m] = e.target.value.split(':').map(Number); if (!isNaN(h)&&!isNaN(m)) onChange({...value, am:{h,m}}); }}
+                className="px-3 py-2 border border-zinc-300 focus:border-zinc-900 focus:outline-none text-base" />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Evening time</label>
+              <label className="block text-[10px] uppercase tracking-[0.15em] font-black text-zinc-400 mb-2">Evening time</label>
               <input type="time" value={hmToHHMM(value.pm)}
-                onChange={e => {
-                  const [h, m] = e.target.value.split(':').map(Number);
-                  if (!isNaN(h) && !isNaN(m)) onChange({ ...value, pm: { h, m } });
-                }}
-                className="px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none text-lg" />
+                onChange={e => { const [h,m] = e.target.value.split(':').map(Number); if (!isNaN(h)&&!isNaN(m)) onChange({...value, pm:{h,m}}); }}
+                className="px-3 py-2 border border-zinc-300 focus:border-zinc-900 focus:outline-none text-base" />
             </div>
-            <p className="text-xs text-slate-500">Your timezone: <span className="font-mono">{tzLabel()}</span></p>
+            <p className="text-xs text-zinc-400">Timezone: <span className="font-mono">{tzLabel()}</span></p>
           </div>
         );
       }
       const label = opt.kind === 'startTime' ? 'Starting time' : 'Time';
       return (
-        <div className="ml-16 -mt-1 mb-3 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100">
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">{label}</label>
+        <div className="ml-10 mt-2 mb-3 p-4 border border-zinc-200 bg-zinc-50/50">
+          <label className="block text-[10px] uppercase tracking-[0.15em] font-black text-zinc-400 mb-2">{label}</label>
           <input type="time" value={hmToHHMM(value)}
-            onChange={e => {
-              const [h, m] = e.target.value.split(':').map(Number);
-              if (!isNaN(h) && !isNaN(m)) onChange({ h, m });
-            }}
-            className="px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 outline-none text-lg" />
-          <p className="mt-2 text-xs text-slate-500">Your timezone: <span className="font-mono">{tzLabel()}</span></p>
+            onChange={e => { const [h,m] = e.target.value.split(':').map(Number); if (!isNaN(h)&&!isNaN(m)) onChange({h,m}); }}
+            className="px-3 py-2 border border-zinc-300 focus:border-zinc-900 focus:outline-none text-base" />
+          <p className="mt-2 text-xs text-zinc-400">Timezone: <span className="font-mono">{tzLabel()}</span></p>
         </div>
       );
     }
@@ -364,52 +313,36 @@
     function Step3({ form, update, onNext, onBack }) {
       const setTime = (freq, t) => update({ times: { ...form.times, [freq]: t } });
       return (
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">How often?</h1>
-          <p className="mt-2 text-slate-600">Pick the cadence that fits your routine.</p>
-          <div className="mt-8 space-y-2">
+        <div className="max-w-xl">
+          <h1 className="serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-3">Select your cadence.</h1>
+          <p className="text-zinc-500 mb-12 text-lg">How often should NewsAgent deliver your briefing?</p>
+
+          <div className="space-y-2">
             {FREQ_OPTIONS.map(opt => {
               const selected = form.frequency === opt.value;
               const detail = describeOption(opt, form.times[opt.value]);
               return (
                 <React.Fragment key={opt.value}>
-                  <label
-                    className={[
-                      "flex items-center p-4 border-2 rounded-xl cursor-pointer transition",
-                      selected ? "border-indigo-600 bg-indigo-50" : "border-slate-200 hover:border-slate-300"
-                    ].join(' ')}
-                  >
-                    <input
-                      type="radio"
-                      name="frequency"
-                      value={opt.value}
-                      checked={selected}
-                      onChange={() => update({ frequency: opt.value })}
-                      className="sr-only"
-                    />
-                    <span className="text-2xl mr-4">{opt.icon}</span>
-                    <div className="flex-1">
-                      <div className="font-semibold text-slate-900">{opt.label}</div>
-                      <div className="text-sm text-slate-500">{detail}</div>
+                  <label className={`flex items-center gap-4 p-4 border cursor-pointer transition-all ${selected ? 'border-zinc-900 bg-zinc-900/5' : 'border-zinc-200 hover:border-zinc-400'}`}>
+                    <input type="radio" name="frequency" value={opt.value} checked={selected}
+                      onChange={() => update({ frequency: opt.value })} className="sr-only" />
+                    <iconify-icon icon={opt.icon} class={`text-lg flex-shrink-0 ${selected ? 'text-zinc-900' : 'text-zinc-400'}`}></iconify-icon>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-bold uppercase tracking-wider ${selected ? 'text-zinc-900' : 'text-zinc-600'}`}>{opt.label}</div>
+                      <div className="text-xs text-zinc-500 mt-0.5">{detail}</div>
                     </div>
-                    <div className={[
-                      "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                      selected ? "border-indigo-600 bg-indigo-600" : "border-slate-300"
-                    ].join(' ')}>
-                      {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+                    <div className={`w-4 h-4 border-2 flex-shrink-0 flex items-center justify-center ${selected ? 'border-zinc-900 bg-zinc-900' : 'border-zinc-300'}`}>
+                      {selected && <div className="w-1.5 h-1.5 bg-white" />}
                     </div>
                   </label>
                   {selected && (
-                    <SchedulePicker
-                      opt={opt}
-                      value={form.times[opt.value]}
-                      onChange={(t) => setTime(opt.value, t)}
-                    />
+                    <SchedulePicker opt={opt} value={form.times[opt.value]} onChange={t => setTime(opt.value, t)} />
                   )}
                 </React.Fragment>
               );
             })}
           </div>
+
           <NavRow onBack={onBack} onNext={onNext} nextLabel="Review" />
         </div>
       );
@@ -420,58 +353,58 @@
       const topics = form.topics.split(/[,\n;]/).map(t => t.trim()).filter(Boolean);
       const scheduleDetail = describeOption(freq, form.times[form.frequency]);
       return (
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Looks good?</h1>
-          <p className="mt-2 text-slate-600">Double-check, then we'll set you up.</p>
-          <div className="mt-8 space-y-5 bg-slate-50 rounded-xl p-6">
-            <Row label="Name" value={form.name} />
-            <Row label="Phone number" value={form.phone} />
-            <Row label="Topics" value={
-              <div className="flex flex-wrap gap-1.5">
+        <div className="max-w-xl">
+          <h1 className="serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-3">Confirm your subscription.</h1>
+          <p className="text-zinc-500 mb-12 text-lg">Verify your details before we activate your briefing.</p>
+
+          <div className="border border-zinc-900 p-6 space-y-6">
+            <ReviewRow label="Subscriber" value={form.name} />
+            <ReviewRow label="Endpoint" value={form.phone} />
+            <ReviewRow label="Coverage Area" value={
+              <div className="flex flex-wrap gap-1.5 mt-1">
                 {topics.map(t => (
-                  <span key={t} className="px-2.5 py-1 bg-white border border-slate-200 rounded-full text-sm">{t}</span>
+                  <span key={t} className="text-xs font-medium border border-zinc-300 px-2 py-0.5">{t}</span>
                 ))}
               </div>
             } />
-            <Row label="Schedule" value={`${freq.icon}  ${freq.label} — ${scheduleDetail}`} />
+            <ReviewRow label="Frequency" value={`${freq.label} — ${scheduleDetail}`} />
           </div>
-          <div className="mt-8 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onBack}
-              disabled={loading}
-              className="px-5 py-3 text-slate-600 hover:text-slate-900 font-medium disabled:opacity-40"
-            >← Back</button>
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 disabled:opacity-50 transition"
-            >{loading ? "Signing up…" : "Sign me up  ✓"}</button>
+
+          <div className="mt-12 flex items-center justify-between">
+            <button onClick={onBack} disabled={loading}
+              className="text-sm font-bold tracking-widest uppercase border-b border-zinc-900 py-1 hover:text-zinc-500 transition-colors disabled:opacity-40">
+              Go Back
+            </button>
+            <button onClick={onSubmit} disabled={loading}
+              className="px-10 py-4 bg-zinc-900 text-white text-sm font-bold tracking-widest uppercase hover:bg-zinc-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+              {loading ? 'Processing...' : 'Activate Subscription'}
+            </button>
           </div>
         </div>
       );
     }
 
-    function Row({ label, value }) {
+    function ReviewRow({ label, value }) {
       return (
         <div>
-          <dt className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</dt>
-          <dd className="mt-1 text-slate-900">{value}</dd>
+          <dt className="text-[10px] uppercase tracking-[0.2em] font-black text-zinc-400">{label}</dt>
+          <dd className="mt-1 text-zinc-900 serif text-lg">{value}</dd>
         </div>
       );
     }
 
-    function NavRow({ onBack, onNext, nextDisabled, nextLabel = "Next" }) {
+    function NavRow({ onBack, onNext, nextDisabled, nextLabel = "Continue" }) {
       return (
-        <div className="mt-10 flex items-center justify-between">
+        <div className="mt-12 flex items-center justify-between">
           {onBack ? (
             <button type="button" onClick={onBack}
-              className="px-5 py-3 text-slate-600 hover:text-slate-900 font-medium">← Back</button>
+              className="text-sm font-bold tracking-widest uppercase border-b border-zinc-900 py-1 hover:text-zinc-500 transition-colors">
+              Go Back
+            </button>
           ) : <div />}
           <button type="button" onClick={onNext} disabled={nextDisabled}
-            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 disabled:opacity-40 disabled:cursor-not-allowed transition">
-            {nextLabel} →
+            className="px-10 py-4 bg-zinc-900 text-white text-sm font-bold tracking-widest uppercase hover:bg-zinc-700 transition-colors disabled:opacity-20 flex items-center gap-2">
+            {nextLabel} <iconify-icon icon="lucide:arrow-right"></iconify-icon>
           </button>
         </div>
       );
@@ -479,30 +412,40 @@
 
     function Success({ user, frequencyLabel, onRestart }) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center p-4">
-          <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl p-10 text-center">
-            <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-              </svg>
+        <div className="min-h-screen flex flex-col bg-[#fcfaf7]">
+          <header className="border-b border-zinc-200 py-5 px-6 md:px-12 flex justify-between items-center bg-[#fcfaf7]">
+            <div className="flex items-center gap-2">
+              <iconify-icon icon="lucide:newspaper" class="text-xl"></iconify-icon>
+              <span className="serif font-bold text-lg tracking-tight">NEWSAGENT</span>
             </div>
-            <h1 className="text-3xl font-bold text-slate-900">{user.name ? `You're all set, ${user.name}!` : "You're all set!"}</h1>
-            <p className="mt-2 text-slate-600">Your first digest arrives at the next scheduled time.</p>
-            <dl className="mt-8 text-left space-y-4 bg-slate-50 rounded-xl p-6">
-              <Row label="Phone" value={user.phone} />
-              <Row label="Topics" value={(user.interests || []).join(', ')} />
-              <Row label="Schedule" value={frequencyLabel || user.frequency} />
-            </dl>
-            <div className="mt-8 flex flex-col gap-3 items-center">
-              <button onClick={onRestart}
-                className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition">
-                Sign up another person
-              </button>
-              <a href="/users" className="text-sm text-slate-500 hover:text-slate-900 underline">
-                Manage users →
-              </a>
+          </header>
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="max-w-xl w-full text-center">
+              <h1 className="serif text-4xl md:text-5xl font-semibold tracking-tight leading-tight mb-4">
+                {user.name ? `Welcome aboard, ${user.name.split(' ')[0]}.` : "You're all set."}
+              </h1>
+              <p className="text-zinc-500 mb-12 text-lg">
+                Your first briefing will be dispatched to <span className="font-bold text-zinc-900">{user.phone}</span> at the next scheduled time.
+              </p>
+              <div className="border border-zinc-200 p-6 text-left space-y-4 mb-12">
+                <ReviewRow label="Topics" value={(user.interests || []).join(', ')} />
+                <ReviewRow label="Schedule" value={frequencyLabel || user.frequency} />
+              </div>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+                <button onClick={onRestart}
+                  className="w-full md:w-auto px-8 py-4 bg-zinc-900 text-white text-sm font-bold tracking-widest uppercase hover:bg-zinc-700 transition-colors">
+                  Sign Up Another
+                </button>
+                <a href="/users"
+                  className="w-full md:w-auto px-8 py-4 border border-zinc-900 text-sm font-bold tracking-widest uppercase hover:bg-zinc-900 hover:text-white transition-all text-center">
+                  Manage Users
+                </a>
+              </div>
             </div>
           </div>
+          <footer className="border-t border-zinc-200 py-6 px-6 text-[10px] tracking-[0.2em] uppercase text-zinc-400 text-center">
+            NewsAgent &mdash; Privacy-First Intelligence
+          </footer>
         </div>
       );
     }

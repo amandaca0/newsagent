@@ -12,3 +12,4 @@ data/logs/
 .DS_Store
 .env
 data/eval_metrics_fail.jsonl
+.superdesign
