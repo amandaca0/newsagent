@@ -9,21 +9,7 @@
       "travel and adventure",
       "artificial intelligence and tech news"
     ],
-    "persona_summary": "A software engineer in his early 30s who follows NBA basketball closely (trades, standings, player news) and keeps tabs on personal finance and investing. Outside of work he cooks seriously, plans travel trips, and stays current on AI and tech developments. Prefers practical, specific information over opinion pieces. Not interested in politics, celebrity gossip, or most other sports.",
-    "qa_pairs": [
-      {
-        "question": "What picks did the Lakers give up in the trade and who did they get?",
-        "article_title": "Lakers acquire Dejounte Murray; send three first-round picks to Atlanta",
-        "source": "ESPN",
-        "article_content": "The Los Angeles Lakers finalized a blockbuster trade sending three unprotected first-round picks (2026, 2028, 2030) and guard D'Angelo Russell to the Atlanta Hawks in exchange for All-Star guard Dejounte Murray. Murray, 27, is averaging 21.4 points and 8.3 assists per game this season. The deal pushes the Lakers $11 million into the luxury tax and hard-caps them at the second apron. Lakers GM Rob Pelinka called Murray 'the missing piece' in a press conference following the trade deadline."
-      },
-      {
-        "question": "What is the new contribution limit for 401(k)s next year?",
-        "article_title": "IRS raises 2026 401(k) contribution limit to $24,500",
-        "source": "Kiplinger",
-        "article_content": "The IRS announced Tuesday that the 401(k) employee contribution limit will increase to $24,500 in 2026, up from $23,500 in 2025. The catch-up contribution limit for workers aged 50 and over rises to $8,500, bringing the total possible contribution to $33,000. IRA contribution limits remain unchanged at $7,000, with the catch-up limit holding at $1,000. The income phase-out range for Roth IRA contributions increases to $150,000–$165,000 for single filers."
-      }
-    ]
+    "persona_summary": "A software engineer in his early 30s who follows NBA basketball closely (trades, standings, player news) and keeps tabs on personal finance and investing. Outside of work he cooks seriously, plans travel trips, and stays current on AI and tech developments. Prefers practical, specific information over opinion pieces. Not interested in politics, celebrity gossip, or most other sports."
   },
   {
     "id": 2,
@@ -35,21 +21,7 @@
       "education policy and school news",
       "mental health and psychology"
     ],
-    "persona_summary": "A high school teacher in her mid-40s who closely follows US politics, education policy, and school funding news. She runs regularly and pays attention to health and fitness research. In her downtime she listens to true crime podcasts and follows investigative journalism. She also cares about mental health — both for herself and her students. Not interested in business news, sports, or celebrity entertainment.",
-    "qa_pairs": [
-      {
-        "question": "What did the study find about walking and dementia risk?",
-        "article_title": "NIH study: 7,000 daily steps reduces dementia risk by 40% in adults over 60",
-        "source": "JAMA Neurology",
-        "article_content": "A National Institutes of Health study tracking 11,000 adults over eight years found that those who averaged 7,000 steps per day had a 40% lower risk of developing dementia compared to those averaging fewer than 3,500 steps. The association held after controlling for cardiovascular health, BMI, and socioeconomic status. The protective effect plateaued around 9,000 steps, with no significant additional benefit beyond that threshold. Researchers noted that step intensity — measured as cadence — did not meaningfully affect the outcome, suggesting total daily movement matters more than pace."
-      },
-      {
-        "question": "How much new funding did the education bill allocate to Title I schools?",
-        "article_title": "Congress passes K-12 funding overhaul with $60B targeted at low-income schools",
-        "source": "Education Week",
-        "article_content": "Congress passed the Students First Act in a 58-41 Senate vote, directing $60 billion over five years specifically to Title I schools serving high concentrations of low-income students. The bill increases per-pupil Title I allocations by an average of $1,800 and ties 30% of the new funding to districts demonstrating measurable literacy improvements by third grade. An additional $8 billion is earmarked for teacher recruitment and retention in high-need districts, including loan forgiveness up to $25,000 for educators who commit to five years in a Title I school."
-      }
-    ]
+    "persona_summary": "A high school teacher in her mid-40s who closely follows US politics, education policy, and school funding news. She runs regularly and pays attention to health and fitness research. In her downtime she listens to true crime podcasts and follows investigative journalism. She also cares about mental health \u2014 both for herself and her students. Not interested in business news, sports, or celebrity entertainment."
   },
   {
     "id": 3,
@@ -61,21 +33,7 @@
       "international travel",
       "American history and politics"
     ],
-    "persona_summary": "A retired physician in his early 60s who stays current on medical research and public health developments — particularly cardiology, oncology, and aging. He golfs regularly and follows the PGA Tour. He actively manages his retirement portfolio and reads about wealth management strategies. He travels internationally several times a year and is deeply interested in American history and current political affairs. Not interested in pop culture, social media trends, or technology for its own sake.",
-    "qa_pairs": [
-      {
-        "question": "What did the Alzheimer's drug trial show in terms of slowing cognitive decline?",
-        "article_title": "Phase 3 trial of donanemab shows 35% slowing of cognitive decline in early Alzheimer's",
-        "source": "New England Journal of Medicine",
-        "article_content": "A phase 3 clinical trial of donanemab, Eli Lilly's amyloid-targeting antibody, demonstrated a 35% slowing of cognitive decline in patients with early symptomatic Alzheimer's disease over an 18-month period, according to results published in the New England Journal of Medicine. The trial enrolled 1,736 patients with confirmed amyloid plaques and low-to-medium tau burden. Serious adverse events, primarily amyloid-related imaging abnormalities (ARIA), occurred in 24% of the treatment group versus 2.1% of the placebo group. The FDA is expected to issue a final approval decision within 60 days."
-      },
-      {
-        "question": "Who won the Masters and what was his final score?",
-        "article_title": "Rory McIlroy wins Masters in playoff, completes career Grand Slam",
-        "source": "Golf Digest",
-        "article_content": "Rory McIlroy won the Masters Tournament at Augusta National in a sudden-death playoff against Scottie Scheffler, completing the career Grand Slam at age 36. McIlroy finished regulation at 15-under par, making a clutch 18-foot birdie putt on the 18th hole to force the playoff after Scheffler bogeyed the same hole. The playoff ended on the second extra hole when McIlroy drained a 12-foot birdie putt. It is McIlroy's fifth major title and his first Masters, the only major that had eluded him across a 14-year professional career."
-      }
-    ]
+    "persona_summary": "A retired physician in his early 60s who stays current on medical research and public health developments \u2014 particularly cardiology, oncology, and aging. He golfs regularly and follows the PGA Tour. He actively manages his retirement portfolio and reads about wealth management strategies. He travels internationally several times a year and is deeply interested in American history and current political affairs. Not interested in pop culture, social media trends, or technology for its own sake."
   },
   {
     "id": 4,
@@ -87,21 +45,7 @@
       "mental health awareness and resources",
       "student debt and higher education policy"
     ],
-    "persona_summary": "A 21-year-old college junior who is passionate about climate activism and follows environmental policy closely. She goes to concerts regularly and follows the indie music scene — new releases, tour announcements, record label news. She cares deeply about social justice issues and mental health destigmatization. Student loan and higher education policy affects her directly and she tracks it closely. Not interested in business news, sports, or mainstream celebrity gossip.",
-    "qa_pairs": [
-      {
-        "question": "How many borrowers did the new student loan forgiveness plan cover?",
-        "article_title": "Education Department extends income-driven repayment forgiveness to 4.5 million borrowers",
-        "source": "NPR",
-        "article_content": "The Department of Education announced Wednesday that 4.5 million borrowers will receive automatic student loan forgiveness under an expanded income-driven repayment adjustment, with discharges averaging $18,000 per borrower. Eligibility covers borrowers who have been in repayment for at least 20 years on undergraduate loans or 25 years on graduate loans, regardless of whether they were enrolled in an IDR plan for the full period. The department said the action corrects years of administrative errors in repayment counting. Total debt discharged across the cohort amounts to approximately $73 billion."
-      },
-      {
-        "question": "What did the IPCC report say about when we'll hit 1.5 degrees of warming?",
-        "article_title": "IPCC supplementary report warns 1.5°C threshold likely crossed by 2034 under current policies",
-        "source": "The Guardian",
-        "article_content": "A supplementary assessment from the Intergovernmental Panel on Climate Change projects that global average temperatures will exceed 1.5°C above pre-industrial levels by 2034 under current national emissions policies — six years earlier than the median estimate in the 2021 Sixth Assessment Report. The revision reflects higher-than-projected methane emissions from the agriculture and fossil fuel sectors. The report notes that limiting warming to 1.5°C now requires a 60% reduction in global CO2 emissions by 2035, compared to the 45% reduction previously cited. Seventeen of the 67 co-authors filed a dissenting note arguing the timeline is overly pessimistic."
-      }
-    ]
+    "persona_summary": "A 21-year-old college junior who is passionate about climate activism and follows environmental policy closely. She goes to concerts regularly and follows the indie music scene \u2014 new releases, tour announcements, record label news. She cares deeply about social justice issues and mental health destigmatization. Student loan and higher education policy affects her directly and she tracks it closely. Not interested in business news, sports, or mainstream celebrity gossip."
   },
   {
     "id": 5,
@@ -113,20 +57,6 @@
       "fashion and beauty trends",
       "marketing, branding, and social media"
     ],
-    "persona_summary": "A marketing manager in her late 30s who follows the real estate market closely — she and her husband are actively looking to buy a home. She has two young kids and reads parenting and child development content. She enjoys celebrity news, keeps up with fashion trends, and professionally stays current on marketing strategy and social media platform changes. Not interested in hard politics, financial markets, or sports.",
-    "qa_pairs": [
-      {
-        "question": "Where did mortgage rates land this week and is it a good time to lock in?",
-        "article_title": "30-year fixed mortgage rate falls to 6.1%, lowest point since January 2023",
-        "source": "Bankrate",
-        "article_content": "The average 30-year fixed mortgage rate dropped to 6.1% this week, according to Freddie Mac's weekly survey, the lowest reading since January 2023. The decline follows a softer-than-expected jobs report and signals from the Federal Reserve that rate cuts remain on track for later this year. Mortgage applications rose 14% week-over-week. Analysts at Bankrate caution that rates could bounce back if upcoming inflation data surprises to the upside, and recommend buyers with strong credit consider locking in now given the uncertainty. The 15-year fixed rate averaged 5.6%."
-      },
-      {
-        "question": "What did the study say about how much screen time affects toddler language development?",
-        "article_title": "JAMA Pediatrics study links more than 2 hours of daily screen time to delayed language development in toddlers",
-        "source": "JAMA Pediatrics",
-        "article_content": "A study published in JAMA Pediatrics following 2,400 children from age 12 months to 36 months found that toddlers averaging more than two hours of daily screen time scored significantly lower on standardized language development assessments at age three, with the effect most pronounced for solo screen use without a parent present. Co-viewing with a caregiver who talked about the content reduced but did not eliminate the association. The study controlled for parental education, income, and time spent reading aloud. Authors recommend the American Academy of Pediatrics' existing guideline of no more than one hour per day for children aged 2 to 5."
-      }
-    ]
+    "persona_summary": "A marketing manager in her late 30s who follows the real estate market closely \u2014 she and her husband are actively looking to buy a home. She has two young kids and reads parenting and child development content. She enjoys celebrity news, keeps up with fashion trends, and professionally stays current on marketing strategy and social media platform changes. Not interested in hard politics, financial markets, or sports."
   }
 ]

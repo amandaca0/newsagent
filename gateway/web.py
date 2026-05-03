@@ -81,22 +81,48 @@ def _coerce_int_range(raw, lo: int, hi: int) -> int | None:
     return v if lo <= v <= hi else None
 
 
-def _frequency_label(frequency: str, custom_hour: int | None, custom_minute: int | None) -> str:
-    if frequency == "custom_daily" and custom_hour is not None and custom_minute is not None:
-        return f"Once a day — {custom_hour:02d}:{custom_minute:02d} UTC"
+_FREQUENCIES_NEEDING_TIME = {
+    "every_4h", "every_8h", "morning_9am", "evening_6pm", "custom_daily", "twice_daily",
+}
+
+
+def _parse_schedule_times(data, frequency: str):
+    """Pull custom_hour/minute (and _2 for twice_daily) out of the request body.
+    Returns a 4-tuple, with values None when not applicable / not provided."""
+    h = m = h2 = m2 = None
+    if frequency in _FREQUENCIES_NEEDING_TIME:
+        h = _coerce_int_range(data.get("custom_hour"), 0, 23)
+        m = _coerce_int_range(data.get("custom_minute"), 0, 59)
+    if frequency == "twice_daily":
+        h2 = _coerce_int_range(data.get("custom_hour_2"), 0, 23)
+        m2 = _coerce_int_range(data.get("custom_minute_2"), 0, 59)
+    return h, m, h2, m2
+
+
+def _schedule_time_errors(frequency, h, m, h2, m2) -> list[str]:
+    errs: list[str] = []
+    if frequency in _FREQUENCIES_NEEDING_TIME and (h is None or m is None):
+        errs.append("Pick a valid time (HH:MM) for this schedule.")
+    if frequency == "twice_daily" and (h2 is None or m2 is None):
+        errs.append("Pick a valid second time (HH:MM) for the twice-daily schedule.")
+    return errs
+
+
+def _frequency_label(frequency: str) -> str:
+    """Human-readable name only — frontend renders any time numbers in local time."""
     return FREQUENCY_CHOICES.get(frequency, frequency)
 
 
 def _user_payload(u: User) -> dict:
     d = u.to_dict()
     d.pop("conversation_history", None)
-    d["frequency_label"] = _frequency_label(u.frequency, u.custom_push_hour, u.custom_push_minute)
+    d["frequency_label"] = _frequency_label(u.frequency)
     return d
 
 
 def _compose_welcome(u: User) -> str:
     topics = ", ".join(u.interests) if u.interests else "(no topics set)"
-    schedule = _frequency_label(u.frequency, u.custom_push_hour, u.custom_push_minute)
+    schedule = _frequency_label(u.frequency)
     return (
         "Welcome to NewsAgent!\n\n"
         f"I'll send you personalized news digests covering: {topics}\n\n"
@@ -132,21 +158,17 @@ def signup_submit():
     phone = normalize_phone(data.get("phone", ""))
     topics = _parse_topics(data.get("topics", ""))
     frequency = data.get("frequency", "morning_9am")
-    custom_hour = None
-    custom_minute = None
-    if frequency == "custom_daily":
-        custom_hour = _coerce_int_range(data.get("custom_hour"), 0, 23)
-        custom_minute = _coerce_int_range(data.get("custom_minute"), 0, 59)
+    custom_hour, custom_minute, custom_hour_2, custom_minute_2 = _parse_schedule_times(data, frequency)
 
     errors = []
     if phone is None:
         errors.append("That phone number didn't look valid.")
-    if not topics:
-        errors.append("Add at least one topic.")
+    if len(topics) < 5:
+        errors.append("Add at least 5 topics.")
     if frequency not in FREQUENCY_CHOICES:
         errors.append("Pick a valid frequency.")
-    if frequency == "custom_daily" and (custom_hour is None or custom_minute is None):
-        errors.append("Pick a valid custom time (HH:MM).")
+    errors.extend(_schedule_time_errors(frequency, custom_hour, custom_minute,
+                                        custom_hour_2, custom_minute_2))
 
     if errors:
         return jsonify(ok=False, error=" ".join(errors)), 400
@@ -158,6 +180,8 @@ def signup_submit():
         user.user_id, frequency,
         custom_push_hour=custom_hour,
         custom_push_minute=custom_minute,
+        custom_push_hour_2=custom_hour_2,
+        custom_push_minute_2=custom_minute_2,
     )
     set_onboarding_state(user.user_id, "DONE")
 
@@ -186,30 +210,27 @@ def api_update_user(user_id: str):
     # topics — regenerate persona summary when they change
     if "topics" in data:
         topics = _parse_topics(data["topics"])
-        if not topics:
-            errors.append("Topics cannot be empty.")
+        if len(topics) < 5:
+            errors.append("Add at least 5 topics.")
         else:
             set_interests(user_id, topics)
             set_persona_summary(user_id, generate_persona_summary(topics))
 
-    # frequency (and custom time if applicable)
+    # frequency (and custom time(s) if applicable)
     if "frequency" in data:
         frequency = data["frequency"]
         if frequency not in FREQUENCY_CHOICES:
             errors.append("Pick a valid frequency.")
         else:
-            custom_hour = None
-            custom_minute = None
-            if frequency == "custom_daily":
-                custom_hour = _coerce_int_range(data.get("custom_hour"), 0, 23)
-                custom_minute = _coerce_int_range(data.get("custom_minute"), 0, 59)
-                if custom_hour is None or custom_minute is None:
-                    errors.append("Pick a valid custom time (HH:MM).")
+            h, m, h2, m2 = _parse_schedule_times(data, frequency)
+            errors.extend(_schedule_time_errors(frequency, h, m, h2, m2))
             if not errors:
                 set_frequency(
                     user_id, frequency,
-                    custom_push_hour=custom_hour,
-                    custom_push_minute=custom_minute,
+                    custom_push_hour=h,
+                    custom_push_minute=m,
+                    custom_push_hour_2=h2,
+                    custom_push_minute_2=m2,
                 )
 
     if errors:

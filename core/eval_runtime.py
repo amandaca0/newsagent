@@ -19,12 +19,12 @@ import time
 from typing import List, Optional
 
 import numpy as np
-from groq import Groq
 
-from config import EVAL_LOG_PATH, EVAL_MODE, GROQ_API_KEY, JUDGE_MODEL
+from config import EVAL_LOG_PATH, EVAL_MODE
 from core.article_fetcher import Article
+from core.llm import complete, llm_configured
 from core.rag_engine import _get_embedder
-from core.user_profile import User, llm_configured
+from core.user_profile import User
 
 log = logging.getLogger(__name__)
 
@@ -154,14 +154,8 @@ def _judge(question: str, answer: str) -> dict:
     if not llm_configured():
         return dict(_NULL_SCORES)
     try:
-        client = Groq(api_key=GROQ_API_KEY)
         prompt = _JUDGE_PROMPT.format(question=question, answer=answer)
-        msg = client.chat.completions.create(
-            model=JUDGE_MODEL,
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = msg.choices[0].message.content.strip()
+        raw = complete(prompt, max_tokens=200, purpose="judge").strip()
         return _parse_judge_json(raw)
     except Exception:
         log.exception("judge call failed")

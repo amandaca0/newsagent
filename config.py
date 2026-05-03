@@ -19,6 +19,8 @@ PUBLIC_URL = os.getenv("NEWSAGENT_PUBLIC_URL", "http://localhost:5000")
 
 LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", "llama-3.3-70b-versatile")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+ANTHROPIC_JUDGE_MODEL = os.getenv("ANTHROPIC_JUDGE_MODEL", "claude-haiku-4-5-20251001")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 PROACTIVE_PUSH_HOUR = int(os.getenv("PROACTIVE_PUSH_HOUR", "8"))

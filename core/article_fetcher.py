@@ -20,11 +20,11 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-from groq import Groq
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from config import GROQ_API_KEY, DB_PATH, LLM_MODEL, NEWSAPI_KEY
+from config import DB_PATH, NEWSAPI_KEY
+from core.llm import active_model, complete
 from core.user_profile import User, already_sent_ids, llm_configured
 
 log = logging.getLogger(__name__)
@@ -341,23 +341,17 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
     if not llm_configured():
         return prefiltered[:top_k]
 
-    client = Groq(api_key=GROQ_API_KEY)
     prompt = _RANK_PROMPT.format(
         persona=persona,
         candidates=_format_candidates(prefiltered),
     )
     try:
-        msg = client.chat.completions.create(
-            model=LLM_MODEL,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = msg.choices[0].message.content
+        raw = complete(prompt, max_tokens=4096, purpose="chat")
         from core.conv_log import log_event
         log_event(
             "llm_call",
             user_id=user.user_id, phone=user.phone,
-            purpose="article_rank", model=LLM_MODEL,
+            purpose="article_rank", model=active_model("chat"),
             prompt=prompt, response=raw,
             candidate_count=len(prefiltered),
         )

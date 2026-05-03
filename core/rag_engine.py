@@ -17,12 +17,12 @@ from typing import List, Optional
 
 import chromadb
 import numpy as np
-from groq import Groq
 from sentence_transformers import SentenceTransformer
 
-from config import GROQ_API_KEY, CHROMA_PATH, EMBEDDING_MODEL, LLM_MODEL
+from config import CHROMA_PATH, EMBEDDING_MODEL
 from core.article_fetcher import Article, get_cached_article
 from core.conv_log import log_event
+from core.llm import active_model, complete
 from core.user_profile import User, llm_configured
 
 log = logging.getLogger(__name__)
@@ -462,46 +462,34 @@ def _answer_with_chunks(
     if not llm_configured():
         return None
 
-    client = Groq(api_key=GROQ_API_KEY)
     prompt = _ANSWER_PROMPT.format(
         not_found_token=_NOT_FOUND_TOKEN,
         history=_format_history(user.conversation_history),
         query=query,
         context=_format_context(chunks),
     )
-    for attempt in range(3):
-        try:
-            msg = client.chat.completions.create(
-                model=LLM_MODEL,
-                max_tokens=1500,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            answer = msg.choices[0].message.content.strip()
-            log_event(
-                "llm_call",
-                user_id=user.user_id, phone=user.phone,
-                purpose=purpose, model=LLM_MODEL,
-                prompt=prompt, response=answer,
-                retrieved_ids=[c.article_id for c in chunks],
-            )
-            if _looks_like_not_found(answer):
-                return None
-            return answer
-        except Exception as e:
-            if "rate_limit" in str(e).lower() and attempt < 2:
-                wait = 10 * (attempt + 1)
-                log.warning("Groq rate limit hit, retrying in %ds (attempt %d)", wait, attempt + 1)
-                time.sleep(wait)
-            else:
-                log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
-                log_event(
-                    "llm_call",
-                    user_id=user.user_id, phone=user.phone,
-                    purpose=purpose, model=LLM_MODEL,
-                    prompt=prompt, response=f"<ERROR: {e}>",
-                )
-                return None
-    return None
+    model = active_model("chat")
+    try:
+        answer = complete(prompt, max_tokens=1500, purpose="chat").strip()
+        log_event(
+            "llm_call",
+            user_id=user.user_id, phone=user.phone,
+            purpose=purpose, model=model,
+            prompt=prompt, response=answer,
+            retrieved_ids=[c.article_id for c in chunks],
+        )
+        if _looks_like_not_found(answer):
+            return None
+        return answer
+    except Exception as e:
+        log.warning("RAG answer LLM call failed (%s)", e, exc_info=True)
+        log_event(
+            "llm_call",
+            user_id=user.user_id, phone=user.phone,
+            purpose=purpose, model=model,
+            prompt=prompt, response=f"<ERROR: {e}>",
+        )
+        return None
 
 
 def handle_followup(user: User, query: str, articles: Optional[List[Article]] = None) -> str:

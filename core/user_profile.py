@@ -15,26 +15,15 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Iterable, List, Optional
 
-from groq import Groq
-
 from config import (
-    GROQ_API_KEY,
     CONVERSATION_HISTORY_TURNS,
     DB_PATH,
-    LLM_MODEL,
 )
+from core.llm import active_model, complete, llm_configured  # re-exported
 
 log = logging.getLogger(__name__)
 
-
-def llm_configured() -> bool:
-    """True only when the API key looks real — not empty and not the
-    placeholder value from .env.example."""
-    if not GROQ_API_KEY:
-        return False
-    if GROQ_API_KEY.endswith("..."):
-        return False
-    return True
+__all__ = ["llm_configured"]  # keep callers' `from core.user_profile import llm_configured` working
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -44,8 +33,10 @@ CREATE TABLE IF NOT EXISTS users (
     persona_summary    TEXT NOT NULL DEFAULT '',
     onboarding_state   TEXT NOT NULL DEFAULT 'NEEDS_ONBOARDING',
     frequency          TEXT NOT NULL DEFAULT 'morning_9am',
-    custom_push_hour   INTEGER,  -- 0..23 UTC; used when frequency = 'custom_daily'
-    custom_push_minute INTEGER,  -- 0..59 UTC; used when frequency = 'custom_daily'
+    custom_push_hour   INTEGER,  -- 0..23 UTC; primary fire time (or starting hour for every_4h/8h)
+    custom_push_minute INTEGER,  -- 0..59 UTC; primary fire minute
+    custom_push_hour_2 INTEGER,  -- 0..23 UTC; second fire time (twice_daily only)
+    custom_push_minute_2 INTEGER, -- 0..59 UTC; second fire minute (twice_daily only)
     last_pushed_at     REAL,
     created_at         REAL NOT NULL,
     updated_at         REAL NOT NULL
@@ -72,12 +63,12 @@ CREATE TABLE IF NOT EXISTS sent_articles (
 
 
 FREQUENCY_CHOICES: dict[str, str] = {
-    "every_4h":     "Every 4 hours (08:00, 12:00, 16:00, 20:00 UTC)",
-    "every_8h":     "Every 8 hours (00:00, 08:00, 16:00 UTC)",
-    "morning_9am":  "Once a day — 09:00 UTC",
-    "evening_6pm":  "Once a day — 18:00 UTC",
-    "twice_daily":  "Twice a day — 09:00 and 18:00 UTC",
-    "custom_daily": "Once a day — custom time",
+    "every_4h":     "Every 4 hours",
+    "every_8h":     "Every 8 hours",
+    "morning_9am":  "Morning briefing",
+    "evening_6pm":  "Evening wrap-up",
+    "twice_daily":  "Morning + evening",
+    "custom_daily": "Custom time",
 }
 
 
@@ -91,6 +82,8 @@ class User:
     frequency: str = "morning_9am"
     custom_push_hour: Optional[int] = None
     custom_push_minute: Optional[int] = None
+    custom_push_hour_2: Optional[int] = None
+    custom_push_minute_2: Optional[int] = None
     last_pushed_at: Optional[float] = None
     conversation_history: List[dict] = field(default_factory=list)
 
@@ -118,8 +111,10 @@ def _migrate(conn: sqlite3.Connection) -> None:
     for col, ddl in (
         ("frequency",          "ALTER TABLE users ADD COLUMN frequency TEXT NOT NULL DEFAULT 'morning_9am'"),
         ("last_pushed_at",     "ALTER TABLE users ADD COLUMN last_pushed_at REAL"),
-        ("custom_push_hour",   "ALTER TABLE users ADD COLUMN custom_push_hour INTEGER"),
-        ("custom_push_minute", "ALTER TABLE users ADD COLUMN custom_push_minute INTEGER"),
+        ("custom_push_hour",     "ALTER TABLE users ADD COLUMN custom_push_hour INTEGER"),
+        ("custom_push_minute",   "ALTER TABLE users ADD COLUMN custom_push_minute INTEGER"),
+        ("custom_push_hour_2",   "ALTER TABLE users ADD COLUMN custom_push_hour_2 INTEGER"),
+        ("custom_push_minute_2", "ALTER TABLE users ADD COLUMN custom_push_minute_2 INTEGER"),
     ):
         if col not in existing:
             conn.execute(ddl)
@@ -135,6 +130,8 @@ def _row_to_user(row: sqlite3.Row, history: List[dict]) -> User:
         frequency=row["frequency"] if "frequency" in row.keys() else "morning_9am",
         custom_push_hour=row["custom_push_hour"] if "custom_push_hour" in row.keys() else None,
         custom_push_minute=row["custom_push_minute"] if "custom_push_minute" in row.keys() else None,
+        custom_push_hour_2=row["custom_push_hour_2"] if "custom_push_hour_2" in row.keys() else None,
+        custom_push_minute_2=row["custom_push_minute_2"] if "custom_push_minute_2" in row.keys() else None,
         last_pushed_at=row["last_pushed_at"] if "last_pushed_at" in row.keys() else None,
         conversation_history=history,
     )
@@ -215,29 +212,43 @@ def set_onboarding_state(user_id: str, state: str) -> None:
         )
 
 
+def _validate_hm(h, m, label: str) -> tuple[int, int]:
+    if h is None or m is None:
+        raise ValueError(f"{label} requires hour and minute")
+    h, m = int(h), int(m)
+    if not (0 <= h <= 23):
+        raise ValueError(f"{label} hour must be 0..23")
+    if not (0 <= m <= 59):
+        raise ValueError(f"{label} minute must be 0..59")
+    return h, m
+
+
 def set_frequency(
     user_id: str,
     frequency: str,
     custom_push_hour: Optional[int] = None,
     custom_push_minute: Optional[int] = None,
+    custom_push_hour_2: Optional[int] = None,
+    custom_push_minute_2: Optional[int] = None,
 ) -> None:
     if frequency not in FREQUENCY_CHOICES:
         raise ValueError(f"unknown frequency: {frequency}")
-    if frequency == "custom_daily":
-        if custom_push_hour is None or not (0 <= int(custom_push_hour) <= 23):
-            raise ValueError("custom_daily requires custom_push_hour in 0..23")
-        if custom_push_minute is None or not (0 <= int(custom_push_minute) <= 59):
-            raise ValueError("custom_daily requires custom_push_minute in 0..59")
-        custom_push_hour = int(custom_push_hour)
-        custom_push_minute = int(custom_push_minute)
-    else:
-        custom_push_hour = None
-        custom_push_minute = None
+
+    h2 = m2 = None
+    if frequency == "twice_daily":
+        custom_push_hour, custom_push_minute = _validate_hm(
+            custom_push_hour, custom_push_minute, "twice_daily morning")
+        h2, m2 = _validate_hm(
+            custom_push_hour_2, custom_push_minute_2, "twice_daily evening")
+    elif frequency in ("every_4h", "every_8h", "morning_9am", "evening_6pm", "custom_daily"):
+        custom_push_hour, custom_push_minute = _validate_hm(
+            custom_push_hour, custom_push_minute, frequency)
+
     with _connect() as conn:
         conn.execute(
             "UPDATE users SET frequency = ?, custom_push_hour = ?, custom_push_minute = ?, "
-            "updated_at = ? WHERE user_id = ?",
-            (frequency, custom_push_hour, custom_push_minute, time.time(), user_id),
+            "custom_push_hour_2 = ?, custom_push_minute_2 = ?, updated_at = ? WHERE user_id = ?",
+            (frequency, custom_push_hour, custom_push_minute, h2, m2, time.time(), user_id),
         )
 
 
@@ -249,29 +260,54 @@ def mark_pushed(user_id: str, when: Optional[float] = None) -> None:
         )
 
 
-_FREQUENCY_HOURS: dict[str, set[int]] = {
-    "every_4h":    {8, 12, 16, 20},
-    "every_8h":    {0, 8, 16},
-    "morning_9am": {9},
-    "evening_6pm": {18},
-    "twice_daily": {9, 18},
-}
-
 _MIN_SECONDS_BETWEEN_PUSHES = 3 * 60 * 60  # debounce against cron retries
 _MINUTE_SLACK = 1  # tolerate ±1 minute of cron drift
+
+# Defaults for users created before per-frequency custom times existed; mirror
+# the old _FREQUENCY_HOURS so they keep firing at the same UTC time.
+_DEFAULT_HOUR = {
+    "every_4h": 8, "every_8h": 0,
+    "morning_9am": 9, "evening_6pm": 18,
+    "twice_daily": 9,
+}
+_DEFAULT_HOUR_2 = {"twice_daily": 18}
 
 
 def _target_minutes_for(user: User) -> set[int]:
     """Return the set of UTC minute-of-day values the user should be pushed at.
 
     One minute-of-day = hour * 60 + minute, so a single scalar per target.
+    Each frequency reads its time(s) from the user's stored custom values,
+    falling back to legacy defaults when those columns are NULL.
     """
-    if user.frequency == "custom_daily":
-        if user.custom_push_hour is None or user.custom_push_minute is None:
+    h, m   = user.custom_push_hour, user.custom_push_minute
+    h2, m2 = user.custom_push_hour_2, user.custom_push_minute_2
+    f = user.frequency
+
+    if f == "custom_daily":
+        if h is None or m is None:
             return set()
-        return {int(user.custom_push_hour) * 60 + int(user.custom_push_minute)}
-    hours = _FREQUENCY_HOURS.get(user.frequency, {9})
-    return {h * 60 for h in hours}  # fixed windows fire at :00
+        return {int(h) * 60 + int(m)}
+
+    if f in ("morning_9am", "evening_6pm"):
+        h_eff = int(h) if h is not None else _DEFAULT_HOUR[f]
+        m_eff = int(m) if m is not None else 0
+        return {h_eff * 60 + m_eff}
+
+    if f == "twice_daily":
+        morn = (int(h)  if h  is not None else _DEFAULT_HOUR[f])   * 60 + (int(m)  if m  is not None else 0)
+        eve  = (int(h2) if h2 is not None else _DEFAULT_HOUR_2[f]) * 60 + (int(m2) if m2 is not None else 0)
+        return {morn, eve}
+
+    if f == "every_4h":
+        start = (int(h) if h is not None else _DEFAULT_HOUR[f]) * 60 + (int(m) if m is not None else 0)
+        return {(start + i * 240) % 1440 for i in range(4)}
+
+    if f == "every_8h":
+        start = (int(h) if h is not None else _DEFAULT_HOUR[f]) * 60 + (int(m) if m is not None else 0)
+        return {(start + i * 480) % 1440 for i in range(3)}
+
+    return {9 * 60}
 
 
 def is_push_due(user: User, now: float) -> bool:
@@ -387,17 +423,11 @@ def generate_persona_summary(interests: List[str]) -> str:
         return fallback
     prompt = _PERSONA_PROMPT.format(interests=", ".join(interests))
     try:
-        client = Groq(api_key=GROQ_API_KEY)
-        msg = client.chat.completions.create(
-            model=LLM_MODEL,
-            max_tokens=300,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        summary = msg.choices[0].message.content.strip()
+        summary = complete(prompt, max_tokens=300, purpose="chat").strip()
         from core.conv_log import log_event
         log_event(
             "llm_call",
-            purpose="persona_summary", model=LLM_MODEL,
+            purpose="persona_summary", model=active_model("chat"),
             prompt=prompt, response=summary,
         )
         return summary

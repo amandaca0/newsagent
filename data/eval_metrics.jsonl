@@ -170,3 +170,44 @@
   }
 }
 
+{
+  "timestamp": 1777797164.28322,
+  "event_type": "digest",
+  "user_id": "u_6be89330b9fa",
+  "phone": "+15126365026",
+  "persona_summary": "This user is interested in a diverse range of topics, including social issues like abortion, technology and business through the lens of Silicon Valley, and entertainment via the Kentucky Derby and The Devil Wears Prada. They may also be drawn to international news, particularly geopolitical developments in Iran, suggesting a potential interest in global affairs and foreign policy. Likely avoiding topics such as extreme sports or heavy metal music, their preferences skew towards more refined or intellectually-driven content, with a possible emphasis on feminist perspectives and cultural critique.",
+  "interests": [
+    "abortion",
+    "silicon valley",
+    "kentucky derby",
+    "iran",
+    "devil wears prada"
+  ],
+  "articles": [
+    {
+      "article_id": "102b6d5e1940c8d2",
+      "title": "Court restricts abortion access across the US by blocking the mailing of mifepristone - AP News",
+      "source": "Associated Press",
+      "persona_similarity": 0.1554,
+      "best_interest": "abortion",
+      "best_interest_similarity": 0.449
+    },
+    {
+      "article_id": "cff73b9c9afad9bc",
+      "title": "Meet the Kentucky Derby horses running in the 2026 race - CBS News",
+      "source": "CBS News",
+      "persona_similarity": 0.1379,
+      "best_interest": "kentucky derby",
+      "best_interest_similarity": 0.6756
+    },
+    {
+      "article_id": "c039fc8e782b3a36",
+      "title": "Iran 'will be participating' at World Cup, including games in U.S., FIFA chief says - NBC News",
+      "source": "NBC News",
+      "persona_similarity": 0.3057,
+      "best_interest": "iran",
+      "best_interest_similarity": 0.4842
+    }
+  ]
+}
+
