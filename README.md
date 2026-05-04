@@ -3,7 +3,7 @@
 Proactive iMessage news agent. Onboards users through a web signup, pushes
 personalized digests on a per-user schedule, and answers follow-up questions
 over the articles it sent using RAG. iMessage I/O runs locally through a
-BlueBubbles server; a Twilio SMS backend is included as an alternative.
+BlueBubbles server.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ BlueBubbles server; a Twilio SMS backend is included as an alternative.
              │ /signup, /api/users            │ run_proactive_push
              ▼                                 ▼
    ┌──────────────────────────────────────────────────┐
-   │ Flask app (gateway/twilio_handler.py)            │
+   │ Flask app (gateway/app.py)                       │
    │   • gateway/web.bp        — SPA + admin JSON     │
    │   • gateway/bluebubbles.bp — /bluebubbles/webhook│
    └─────────┬────────────────────────┬───────────────┘
@@ -36,15 +36,38 @@ BlueBubbles server; a Twilio SMS backend is included as an alternative.
    │ SQLite:    │  │ NewsAPI →    │  │ Chroma (per-user) │
    │ users,     │  │ SQLite cache │  │ + sentence-       │
    │ messages,  │  │ TF-IDF → LLM │  │ transformers +    │
-   │ sent_art., │  │ rank + diver │  │ MMR + Llama 3.3   │
-   │ articles   │  │ sify         │  │ via Groq          │
+   │ sent_art., │  │ rank + diver │  │ MMR + LLM answer  │
+   │ articles   │  │ sify         │  │ (see below)       │
    └────────────┘  └──────────────┘  └───────────────────┘
 ```
 
-**LLM**: Llama 3.3 70B served by Groq (`LLM_MODEL`, default
-`llama-3.3-70b-versatile`). Three call sites: persona summarization, article
-ranking, and RAG answering. All gated by `llm_configured()` for graceful
-degradation when no API key is set.
+### LLM provider
+
+A single `core/llm.py` client backs all three call sites — persona
+summarization, article ranking, and RAG answering — and supports two
+providers:
+
+- **Anthropic** — Claude Haiku 4.5 (`ANTHROPIC_MODEL`, default `claude-haiku-4-5-20251001`)
+- **Groq** — Llama 3.3 70B (`LLM_MODEL`, default `llama-3.3-70b-versatile`)
+
+Selection is controlled by `AGENT_PROVIDER` in `.env` (one of `auto`,
+`anthropic`, `groq`, `tfidf`). The resolution hierarchy:
+
+| `AGENT_PROVIDER` | Behavior |
+|---|---|
+| `auto` (default) | Anthropic if `ANTHROPIC_API_KEY` is set, else Groq if `GROQ_API_KEY` is set, else TF-IDF only |
+| `anthropic` | Force Anthropic; warn + fall back to TF-IDF if no key |
+| `groq` | Force Groq; warn + fall back to TF-IDF if no key |
+| `tfidf` | Skip LLMs entirely (deterministic baseline) |
+
+A key is treated as "real" only if it's non-empty and doesn't end in `...`
+(the placeholder convention in `.env.example`). When no provider resolves,
+`llm_rank` falls back to TF-IDF, `generate_persona_summary` falls back to a
+keyword join, and `handle_followup` returns a fixed apology — the system
+degrades gracefully rather than crashing.
+
+The LLM-as-Judge step in `core/eval_runtime.py` is independent of this
+hierarchy — it always uses Anthropic (`ANTHROPIC_JUDGE_MODEL`).
 
 ## Quickstart
 
@@ -93,12 +116,40 @@ user send.
 - `scheduler.py` — APScheduler 1-minute cron; `is_push_due` evaluates target-minute match within ±1 min slack and 3 h debounce
 - `gateway/bluebubbles.py` — BlueBubbles outbound sender + `/bluebubbles/webhook`
 - `gateway/web.py` — React SPA, signup + admin JSON API
-- `gateway/twilio_handler.py` — Flask app entry point; Twilio SMS backend (alternate transport)
+- `gateway/app.py` — Flask app entry point; wires the web + BlueBubbles blueprints
 - `core/eval_runtime.py` — inline evaluation hooks (digest relevance + LLM-as-Judge response scoring); toggled by `EVAL_MODE=1`, writes to `data/eval_metrics.jsonl`
+
+## CLI mode (no BlueBubbles required)
+
+For local development, demos, or anywhere you don't want to set up an
+iMessage server, you can drive the full pipeline from the terminal:
+
+```bash
+python main.py init
+python main.py serve                # in one terminal — Flask app for the signup UI
+# open http://localhost:5000 and complete the signup form for any phone number
+# (the number doesn't have to be real; CLI mode just keys off the SQLite row)
+
+python main.py cli +15551234567     # in another terminal — talk as that user
+```
+
+`main.py cli <phone>` mirrors the BlueBubbles flow exactly:
+
+1. Force-pushes a fresh digest (clears `sent_articles`, force-refreshes the
+   article cache, prints the digest to stdout).
+2. Drops into a REPL where each line is sent through `run_inbound`, the
+   reply is printed, and conversation history + RAG retrieval behave the
+   same way they would for a real iMessage user.
+
+Eval metrics fire through the same `agent/graph.py` hooks when `EVAL_MODE=1`,
+so the CSVs in `data/` work identically whether you ran via CLI or iMessage.
+
+You only need the `serve` and `scheduler` processes if you want the web
+admin UI or the cron-driven proactive push — the CLI bypasses both.
 
 ## BlueBubbles (two-way iMessage, free, local-only)
 
-An alternative to Twilio for demos. Runs entirely on your Mac.
+Runs entirely on your Mac.
 
 1. Install the server app: https://bluebubbles.app → download "Server"
 2. Open it, sign into iMessage, grant **Full Disk Access** + **Accessibility**

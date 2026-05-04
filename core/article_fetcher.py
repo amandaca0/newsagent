@@ -10,7 +10,6 @@ spend bounded.
 from __future__ import annotations
 
 import hashlib
-import html
 import json
 import logging
 import os
@@ -33,12 +32,6 @@ log = logging.getLogger(__name__)
 # isn't actionable for us — we already log a debug message on scrape failure.
 logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
 logging.getLogger("trafilatura.downloads").setLevel(logging.CRITICAL)
-
-
-def _strip_html(text: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", text)
-    text = html.unescape(text)
-    return re.sub(r"\s+", " ", text).strip()
 
 
 ARTICLE_STORE_DAYS = 7         # keep articles for 7 days
@@ -345,40 +338,6 @@ def _fetch_newsapi() -> List[Article]:
     return out
 
 
-def search_articles(query: str, top_k: int = 10) -> List[Article]:
-    """Search NewsAPI for articles matching a specific query and store them."""
-    if not NEWSAPI_KEY:
-        return []
-    try:
-        from newsapi import NewsApiClient
-    except ImportError:
-        return []
-    client = NewsApiClient(api_key=NEWSAPI_KEY)
-    try:
-        resp = client.get_everything(
-            q=query, language="en", page_size=top_k, sort_by="relevancy"
-        )
-    except Exception as e:
-        log.warning("NewsAPI search failed for %r: %s", query, e)
-        return []
-    out: List[Article] = []
-    for item in resp.get("articles", []):
-        url = item.get("url", "")
-        if not url:
-            continue
-        out.append(Article(
-            article_id=_article_id(url),
-            title=_strip_html(item.get("title") or ""),
-            source=(item.get("source") or {}).get("name", "NewsAPI"),
-            url=url,
-            published_at=item.get("publishedAt"),
-            summary=_strip_html(item.get("description") or ""),
-            content=_strip_html(item.get("content") or ""),
-        ))
-    _store_articles(out)
-    return out
-
-
 def fetch_articles(force_refresh: bool = False) -> List[Article]:
     """Fetch new articles into the persistent store and return all recent articles.
 
@@ -489,12 +448,12 @@ def llm_rank(articles: List[Article], user: User, top_k: int = 5) -> List[Articl
         candidates=_format_candidates(prefiltered),
     )
     try:
-        raw = complete(prompt, max_tokens=4096, purpose="chat")
+        raw = complete(prompt, max_tokens=4096)
         from core.conv_log import log_event
         log_event(
             "llm_call",
             user_id=user.user_id, phone=user.phone,
-            purpose="article_rank", model=active_model("chat"),
+            purpose="article_rank", model=active_model(),
             prompt=prompt, response=raw,
             candidate_count=len(prefiltered),
         )

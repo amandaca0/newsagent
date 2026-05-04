@@ -19,16 +19,9 @@ python main.py delete <phone>      # remove user's SQLite rows + Chroma collecti
 python main.py logs <phone>        # print readable per-user transcript with full prompts
 ```
 
-Evaluation harness:
+Inline evaluation runs automatically when `EVAL_MODE=1` is set; every digest send and follow-up reply is scored and appended to `data/eval_metrics.jsonl` by `core/eval_runtime.py`. The LLM-as-Judge step uses Anthropic only (`ANTHROPIC_API_KEY`); without that key, judge scores are recorded as `null` and the cosine-similarity metrics still run.
 
-```bash
-python -m eval.evaluation --all --out eval_results.json
-python -m eval.evaluation --retrieval    # hit-rate@k on gold QA pairs (works without API key)
-python -m eval.evaluation --relevance    # LLM-as-Judge with chain-of-thought
-python -m eval.evaluation --baseline     # TF-IDF vs. LLM-ranked comparison
-```
-
-There is no test runner, lint configuration, or build step. To smoke-check changes, run `python3 -m compileall -q core/ agent/ gateway/ eval/ scheduler.py main.py`.
+There is no test runner, lint configuration, or build step. To smoke-check changes, run `python3 -m compileall -q core/ agent/ gateway/ scheduler.py main.py`.
 
 After schema changes to `core/user_profile.py`, callers must re-run `python main.py init` — `init_db()` triggers the idempotent `_migrate()` block that runs `ALTER TABLE ... ADD COLUMN` for any new columns.
 
@@ -62,28 +55,44 @@ Three storage layers with different lifecycles:
 - **ChromaDB** (`data/chroma/`) — one collection per user named `user_<user_id>`, holding paragraph-chunked embeddings of the articles that have been pushed to that user. Used only by the RAG retrieval step. Created lazily; deleted by `drop_user_collection()`.
 - **JSONL + per-user transcript** (`data/logs/`) — `core/conv_log.py` writes every inbound, outbound, and LLM call with the full prompt and response. Master log is `conversations.jsonl`; readable per-user log is `<phone>.log`.
 
-### Three LLM call sites
+### LLM provider hierarchy
 
-The chat / ranking / persona LLM is **Groq-hosted Llama 3.3 70B** (`LLM_MODEL` in `config.py`, default `llama-3.3-70b-versatile`), reached via the `groq` Python SDK. All three call sites instantiate `Groq(api_key=GROQ_API_KEY)` directly. There are exactly three:
+There is exactly one LLM client (`core/llm.py`) used by all chat / ranking / persona call sites. It supports two providers:
+
+- **Anthropic** — Claude Haiku 4.5 (`ANTHROPIC_MODEL`, default `claude-haiku-4-5-20251001`)
+- **Groq** — Llama 3.3 70B (`LLM_MODEL`, default `llama-3.3-70b-versatile`)
+
+Selection is driven by `AGENT_PROVIDER` (env var, one of `auto` | `anthropic` | `groq` | `tfidf`). The resolution order in `_resolved_provider()`:
+
+1. `AGENT_PROVIDER=tfidf` → return `None`; callers skip LLM and use the TF-IDF / keyword fallback.
+2. `AGENT_PROVIDER=anthropic` → use Anthropic if `ANTHROPIC_API_KEY` is "real"; otherwise log a one-time warning and return `None` (TF-IDF fallback).
+3. `AGENT_PROVIDER=groq` → analogous: use Groq if `GROQ_API_KEY` is "real"; otherwise warn and return `None`.
+4. `AGENT_PROVIDER=auto` (default) → prefer Anthropic if its key is real, else Groq if its key is real, else `None`.
+
+A key is "real" iff it is non-empty and does not end in `...` (the placeholder convention in `.env.example`). `llm_configured()` is the boolean that all callers gate on.
+
+There are exactly three call sites, all routed through `core.llm.complete()`:
 
 1. `core/rag_engine.py` — followup answer (`_ANSWER_PROMPT`). The reply users see when they text in. Includes a 3-attempt retry on rate-limit errors and a sentinel-token (`INFORMATION_NOT_FOUND`) abstention contract; soft-hedge phrases ("the article doesn't mention…") are post-hoc rewritten to the sentinel via `_SOFT_NOT_FOUND_PATTERNS`.
 2. `core/article_fetcher.py` — article ranker (`_RANK_PROMPT`). Scores TF-IDF-prefiltered candidates (top `TFIDF_PREFILTER_K = 15`) against the persona summary; called once per push cycle. Output is structured JSON with `score ∈ [0,1]` and a one-sentence rationale per article. Survivors are filtered by `MIN_RELEVANCE_SCORE = 0.3` and then deduplicated by TF-IDF cosine ≥ 0.60.
 3. `core/user_profile.py` — persona summary (`_PERSONA_PROMPT`). Called on signup and on every topic edit; the output is what the article ranker compares articles against.
 
-All three are gated by `llm_configured()` which treats both empty and placeholder keys (`...` suffix) as "not configured" so the system degrades gracefully — `llm_rank` falls back to TF-IDF, `generate_persona_summary` falls back to a keyword join, and `handle_followup` returns a fixed apology.
+When no provider resolves: `llm_rank` falls back to TF-IDF, `generate_persona_summary` falls back to a keyword join, and `handle_followup` returns a fixed apology.
+
+The eval-time LLM-as-Judge in `core/eval_runtime.py` is **separate from this hierarchy** — it always uses Anthropic directly (`ANTHROPIC_JUDGE_MODEL`), bypassing `core/llm.py`. Groq is intentionally not used as a judge.
 
 Embeddings (`EMBEDDING_MODEL`, default `sentence-transformers/all-MiniLM-L6-v2`) run locally via `sentence-transformers` and are used in: Chroma indexing, MMR retrieval, the `topic_diverse_articles` per-interest selector, and `_best_digest_match` / `_find_similar_articles` in the RAG engine.
 
 ### Messaging gateway
 
-The Flask app in `gateway/twilio_handler.py` registers two blueprints:
+The Flask app in `gateway/app.py` registers two blueprints:
 
 - `gateway.web.bp` — serves the React SPAs (`/`, `/users`) and the JSON admin API (`/signup`, `/api/users[/<id>]`).
 - `gateway.bluebubbles.bp` — the inbound webhook at `/bluebubbles/webhook`. Filters non-`new-message` events and `isFromMe=true`, looks up the sender by phone (exact match against `users.phone`), runs `run_inbound`, and POSTs the reply back through the BlueBubbles REST API.
 
 Inbound iMessage is **only** processed for already-signed-up phone numbers — strangers are silently ignored. To change this, edit the `get_user_by_phone(phone)` lookup in `bluebubbles_webhook`. The signup page normalizes phones to E.164 (`+15551234567`); BlueBubbles also emits E.164, so an exact string compare is sufficient in practice.
 
-`gateway/twilio_handler.py` itself remains a working alternative SMS backend but no scheduler code calls it currently.
+`main.py cli <phone>` is the local mirror of this flow for development without an iMessage server: it force-pushes a digest to stdout (mirroring `scheduler.push_one_phone`), then drops into a REPL that calls `run_inbound` on each line. The user must already be signed up + onboarded (`onboarding_state == "DONE"`) — sign up at `/` (the Flask app) first. Eval hooks fire identically whether the message arrives via CLI or webhook.
 
 ### React SPAs
 
@@ -94,7 +103,7 @@ The custom-time picker computes UTC at submit by `new Date().setHours(h, m); .ge
 ## Operational notes
 
 - NewsAPI is fetched at most once per `FETCH_INTERVAL_SECONDS` (2 h) globally, not per user, to stay inside the free-tier quota. Articles persist for `ARTICLE_STORE_DAYS = 7` in the SQLite cache.
-- The fetch fans out across all seven NewsAPI top-headline categories; `search_articles` is also exposed for query-driven NewsAPI `get_everything` calls.
+- The fetch fans out across all seven NewsAPI top-headline categories.
 - `MAX_ARTICLES_PER_PUSH` (config) bounds digest size; `TFIDF_PREFILTER_K` (article_fetcher) bounds how many candidates the LLM ranker scores; `_DIVERSITY_THRESHOLD = 0.60` is the post-rank near-duplicate cosine cutoff.
 - All schedule arithmetic is UTC. The React SPA shows the user's IANA timezone next to the time input but stores UTC.
 - `push <phone>` (in addition to `push-once` and `push-all`) force-pushes a single user; this clears their `sent_articles` and force-refreshes the article cache so something new is guaranteed to land.

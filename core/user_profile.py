@@ -435,11 +435,11 @@ def generate_persona_summary(interests: List[str]) -> str:
         return fallback
     prompt = _PERSONA_PROMPT.format(interests=", ".join(interests))
     try:
-        summary = complete(prompt, max_tokens=300, purpose="chat").strip()
+        summary = complete(prompt, max_tokens=300).strip()
         from core.conv_log import log_event
         log_event(
             "llm_call",
-            purpose="persona_summary", model=active_model("chat"),
+            purpose="persona_summary", model=active_model(),
             prompt=prompt, response=summary,
         )
         return summary

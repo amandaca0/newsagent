@@ -475,9 +475,9 @@ def _answer_with_chunks(
         query=query,
         context=_format_context(chunks),
     )
-    model = active_model("chat")
+    model = active_model()
     try:
-        answer = complete(prompt, max_tokens=1500, purpose="chat").strip()
+        answer = complete(prompt, max_tokens=1500).strip()
         log_event(
             "llm_call",
             user_id=user.user_id, phone=user.phone,

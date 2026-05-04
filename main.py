@@ -1,7 +1,7 @@
 """One-command entry points for local development.
 
     python main.py init             # initialize DB + cache schema
-    python main.py serve            # run Flask app (signup UI + Twilio webhook)
+    python main.py serve            # run Flask app (signup UI + BlueBubbles webhook)
     python main.py scheduler        # run the hourly proactive-push scheduler
     python main.py push-once        # one scheduler tick now (respects frequency)
     python main.py push-all         # force-push every onboarded user (demos)
@@ -39,7 +39,7 @@ def _init() -> None:
 
 
 def _serve() -> None:
-    from gateway.twilio_handler import main as serve_main
+    from gateway.app import main as serve_main
     serve_main()
 
 

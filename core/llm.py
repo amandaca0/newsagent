@@ -11,8 +11,8 @@ A key is considered "real" when it is non-empty and does not end in "..."
 Public API:
   - llm_configured() -> bool
   - active_provider() -> "anthropic" | "groq" | None
-  - active_model(purpose) -> str         (used by callers for logging)
-  - complete(prompt, *, max_tokens, purpose, max_retries) -> str
+  - active_model() -> str         (used by callers for logging)
+  - complete(prompt, *, max_tokens, max_retries) -> str
 """
 from __future__ import annotations
 
@@ -28,16 +28,13 @@ from groq import RateLimitError as GroqRateLimitError
 from config import (
     AGENT_PROVIDER,
     ANTHROPIC_API_KEY,
-    ANTHROPIC_JUDGE_MODEL,
     ANTHROPIC_MODEL,
     GROQ_API_KEY,
-    JUDGE_MODEL,
     LLM_MODEL,
 )
 
 log = logging.getLogger(__name__)
 
-Purpose = Literal["chat", "judge"]
 Provider = Literal["anthropic", "groq"]
 
 
@@ -87,16 +84,12 @@ def active_provider() -> Optional[Provider]:
     return _resolved_provider()
 
 
-_ANTHROPIC_MODELS = {"chat": ANTHROPIC_MODEL, "judge": ANTHROPIC_JUDGE_MODEL}
-_GROQ_MODELS = {"chat": LLM_MODEL, "judge": JUDGE_MODEL}
-
-
-def active_model(purpose: Purpose = "chat") -> str:
+def active_model() -> str:
     provider = active_provider()
     if provider == "anthropic":
-        return _ANTHROPIC_MODELS[purpose]
+        return ANTHROPIC_MODEL
     if provider == "groq":
-        return _GROQ_MODELS[purpose]
+        return LLM_MODEL
     return ""
 
 
@@ -104,7 +97,6 @@ def complete(
     prompt: str,
     *,
     max_tokens: int = 1500,
-    purpose: Purpose = "chat",
     max_retries: int = 3,
 ) -> str:
     """Send one user prompt, return the assistant's text reply.
@@ -118,7 +110,7 @@ def complete(
     if provider is None:
         raise RuntimeError("no LLM provider configured")
 
-    model = active_model(purpose)
+    model = active_model()
     last_exc: Optional[Exception] = None
 
     for attempt in range(max_retries):
