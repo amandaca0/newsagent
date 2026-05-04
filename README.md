@@ -5,7 +5,7 @@ personalized digests on a per-user schedule, and answers follow-up questions
 over the articles it sent using RAG. iMessage I/O runs locally through a
 BlueBubbles server.
 
-For those grading for CPSC 4770 Large Language Models, if you do not have a MacBook or do not want to set up BlueBubbles, follow the instructions below for CLI mode. NewsAPI and Groq API keys are freely available. The LLM-as-Judge only works using an Anthropic API key. If you need help getting any of these API keys to test, let us know.
+For those grading for CPSC 4770 Large Language Models, if you do not have a MacBook or do not want to set up BlueBubbles, follow the instructions below for CLI mode. NewsAPI (https://newsapi.org/) and Groq API (https://console.groq.com/home) keys are freely available. The LLM-as-Judge only works using an Anthropic API key. If you need help getting any of these API keys to test, let us know.
 
 ## Architecture
 
